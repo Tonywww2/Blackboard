@@ -1,0 +1,7 @@
+[versions]
+kotlin = "2.4.0"
+architectury-loom = "1.11-SNAPSHOT"
+
+[plugins]
+kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+architectury-loom = { id = "dev.architectury.loom", version.ref = "architectury-loom" }

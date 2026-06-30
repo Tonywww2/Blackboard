@@ -1,0 +1,9 @@
+{
+  "parent": "minecraft:block/orientable",
+  "textures": {
+    "particle": "blackboard:block/blackboard_side",
+    "top": "blackboard:block/blackboard_side",
+    "front": "blackboard:block/blackboard_front",
+    "side": "blackboard:block/blackboard_side"
+  }
+}

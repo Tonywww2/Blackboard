@@ -1,0 +1,39 @@
+# Gradle
+.gradle/
+**/.gradle/
+**/build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Kotlin compiler caches
+.kotlin/
+**/.kotlin/
+
+# Stonecutter / Loom dev run + logs
+run/
+**/run/
+logs/
+**/logs/
+*.log
+
+# IDE — IntelliJ
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# IDE — Eclipse
+.classpath
+.project
+.settings/
+bin/
+
+# IDE — VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Misc
+*.hprof
