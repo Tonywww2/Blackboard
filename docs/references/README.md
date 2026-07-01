@@ -21,9 +21,9 @@
 
 ---
 
-## 二、外部参考（已归档：构建/Kotlin）
+## 二、外部参考（已归档：构建/Kotlin/渲染）
 
-基于作者提供的资料（Stonecutter 官方 wiki、官方/rotgruengelb 模板、KotlinLangForge）已核实并归档：
+基于作者提供的资料（Stonecutter 官方 wiki、官方/rotgruengelb 模板、KotlinLangForge、ApricityUI 官方文档）已核实并归档：
 
 | 文件 | 覆盖内容 | 状态 |
 | --- | --- | --- |
@@ -32,18 +32,20 @@
 | [kotlinlangforge.md](kotlinlangforge.md) | KLF：`modLoader="klf"`、`@Mod` 入口、事件总线/注解、版本对照表与 Maven 坐标、内置库 | ✅ 已归档 |
 | [loader-platform-api.md](loader-platform-api.md) | **C**：Forge 1.20.1 ↔ NeoForge 1.21.1 的方块/物品/方块实体注册、`SyncedBlockEntity` 客户端同步、`HolderLookup.Provider` 变化、网络通道（SimpleChannel vs PayloadRegistrar）（据 FarmersDelight 两分支）| ✅ 已归档（C1/C2/C3）|
 | [kubejs-integration.md](kubejs-integration.md) | **D**：KubeJS 插件模式（`kubejs.plugins.txt` + `KubeJSPlugin` + `EventGroup` + `EventJS`）与生命周期桥接（据 SlashBlade-SenDims, KubeJS 6/Forge）| ✅ 已归档（含 1.21 待验）|
+| [apricity-ui.md](apricity-ui.md) | **E**：ApricityUI（晴雪UI）世界内渲染——依赖坐标（loader+MC 限定，Forge/NeoForge 均有制品）、`WorldWindow`/`FollowFacingWorldWindow`、静态资源层（`apricity/blackboard/`）、标签/CSS/JS 子集、`BlackboardRenderer` 实现方案与 **LaTeX 缺口**（据 doc.sighs.cc + 官方 Nexus 版本索引）| ✅ 已归档（3 处待核实）|
 
-> 这五份中仍需落地时确认的点：
-> - **具体版本号**：KLF / NeoForge 21.1.x / KubeJS（multiloader-build.md）；
+> 这六份中仍需落地时确认的点：
+> - **具体版本号**：KLF / NeoForge 21.1.x / KubeJS（multiloader-build.md）、AUI（`deps.aui`：Forge≈1.1.6.4 / NeoForge-1.21.1≈1.1.2）；
 > - C4 聊天事件 / C5 发奖 / C6 `Component` 编解码——按作者指示**导入后查反编译源码**确认（loader-platform-api.md §6）；
-> - KubeJS 7 的 `EventGroup`/`EventJS` 精确签名（kubejs-integration.md §6，仅 1.21 侧需时）。
+> - KubeJS 7 的 `EventGroup`/`EventJS` 精确签名（kubejs-integration.md §6，仅 1.21 侧需时）；
+> - **AUI**：`WorldWindow` 参数语义、Java 侧内容注入 API、LaTeX 渲染路径（apricity-ui.md §7）。
 > 已解决：KLF 依赖配置名 = Loom `modImplementation`；KubeJS 7 发现机制 = `kubejs.plugins.txt`（同 KJS6）。
 
 ---
 
 ## 三、已关闭 / 不需要
 
-- **E. ApricityUI 渲染**：作者明确「现在只需传入 `Component`」。渲染接口（`BlackboardRenderer` + `RenderContext.content: Component`）已在 design §5.2/§8 定义，**本阶段不再展开 AUI 细节**。
+- ~~**E. ApricityUI 渲染**~~ ✅ **已调查并归档** → [apricity-ui.md](apricity-ui.md)。渲染接口（`BlackboardRenderer` + `RenderContext.content: Component`）保持不变（design §5.2/§8）；AUI 侧的依赖坐标、`WorldWindow` 世界内渲染、资源层与 **LaTeX 缺口**已按官方文档归档，3 处待核实见该文 §7。
 - **F. 数学求值/校验库**：作者明确「完全由 `QuestionGenerator.validate` 内的逻辑处理」。因此模组核心**不内置**任何数值/CAS 库；answer-format-and-validation.md 中的 `Validators` 仅为可选辅助，生成器作者可自行在 `validate` lambda 里实现任意判题逻辑。
 
 ---

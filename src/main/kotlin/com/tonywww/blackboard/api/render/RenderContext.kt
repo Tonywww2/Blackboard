@@ -21,6 +21,9 @@ interface RenderContext {
     /** Position of the blackboard block. */
     val pos: BlockPos
 
+    /** The board's addressable id (shown together with the question; empty if not yet assigned). */
+    val boardId: String
+
     /** Current block state of the blackboard. */
     val blockState: BlockState
 

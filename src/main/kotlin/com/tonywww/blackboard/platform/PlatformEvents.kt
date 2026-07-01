@@ -155,7 +155,13 @@ object PlatformEvents {
         val level = event.level as? ServerLevel ?: return
         val chunk = event.chunk as? LevelChunk ?: return
         for (be in chunk.blockEntities.values) {
-            if (be is BlackboardBlockEntity) BlackboardManager.track(level, be)
+            if (be !is BlackboardBlockEntity) continue
+            if (be.boardId.isEmpty()) {
+                // 世界生成放置的黑板尚未初始化：回主线程分配 boardId+默认类型并出题（区块加载可能在异步线程）。
+                level.server.execute { if (!be.isRemoved) BlackboardManager.onPlaced(be) }
+            } else {
+                BlackboardManager.track(level, be)
+            }
         }
     }
 

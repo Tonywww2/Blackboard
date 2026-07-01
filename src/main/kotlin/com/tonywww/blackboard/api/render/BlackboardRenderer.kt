@@ -1,5 +1,7 @@
 package com.tonywww.blackboard.api.render
 
+import net.minecraft.core.BlockPos
+
 /**
  * Renders a blackboard's question into the world.
  *
@@ -16,4 +18,10 @@ fun interface BlackboardRenderer {
      * blackboard whose [RenderContext.content] has changed.
      */
     fun render(context: RenderContext)
+
+    /**
+     * Called client-side when the blackboard at [pos] is removed (e.g. the block is broken), so the
+     * renderer can tear down any per-board resources (such as an in-world window). Default no-op.
+     */
+    fun remove(pos: BlockPos) {}
 }

@@ -3,19 +3,23 @@ package com.tonywww.blackboard
 //? if forge {
 import net.minecraftforge.fml.ModList
 import net.minecraftforge.fml.common.Mod
+import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent
 //?} else {
 /*import net.neoforged.fml.ModList
 import net.neoforged.fml.common.Mod
+import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent
 *///?}
 
 import com.tonywww.blackboard.builtin.BuiltinBlackboardTypes
 import com.tonywww.blackboard.builtin.BuiltinGenerators
 import com.tonywww.blackboard.builtin.calculus.CalculusGenerators
+import com.tonywww.blackboard.client.BlackboardClient
 import com.tonywww.blackboard.compat.kubejs.BlackboardKubePlugin
 import com.tonywww.blackboard.content.ModBlockEntities
 import com.tonywww.blackboard.content.ModBlocks
 import com.tonywww.blackboard.content.ModCreativeTabs
 import com.tonywww.blackboard.content.ModItems
+import com.tonywww.blackboard.worldgen.ModFeatures
 import dev.nyon.klf.MOD_BUS
 import org.slf4j.LoggerFactory
 
@@ -59,6 +63,7 @@ object Blackboard {
         ModItems.register(bus)
         ModBlockEntities.register(bus)
         ModCreativeTabs.register(bus)
+        ModFeatures.register(bus)
 
         // Built-in generators then types (order per P5-B); registered into the later-frozen registries.
         BuiltinGenerators.register()
@@ -74,6 +79,11 @@ object Blackboard {
             BlackboardKubePlugin.register(bus)
             logger.info("KubeJS detected: Blackboard integration enabled")
         }
+
+        // Client-only: inject the ApricityUI world renderer during client setup. FMLClientSetupEvent
+        // only fires on the client, and BlackboardClient no-ops without ApricityUI, so the default
+        // no-op renderer stays on dedicated servers / AUI-less installs.
+        bus.addListener { _: FMLClientSetupEvent -> BlackboardClient.init() }
 
         logger.info("Blackboard loaded")
     }

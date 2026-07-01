@@ -38,6 +38,8 @@ repositories {
     maven("https://maven.minecraftforge.net/")
     maven("https://repo.nyon.dev/releases") // KotlinLangForge
     maven("https://maven.latvian.dev/releases") // KubeJS (soft dependency)
+    maven("https://maven.architectury.dev/") // Architectury (KubeJS runtime transitive, dev-only)
+    maven("https://maven.sighs.cc/repository/maven-public/") // ApricityUI (soft dependency)
 }
 
 dependencies {
@@ -91,10 +93,51 @@ dependencies {
     if (loader == ModPlatform.FORGE) {
         modCompileOnly("dev.latvian.mods:kubejs-forge:${property("deps.kubejs")}") { excludeAnimatedGifLib() }
         modCompileOnly("dev.latvian.mods:rhino-forge:${property("deps.rhino")}")
+        // Dev-only: AUI's page-JS engine (ApricityJS.eval) bails out unless KubeJS is a loaded mod, so
+        // load KubeJS + its Architectury/Rhino transitives into runClient to exercise the KaTeX LaTeX
+        // path (P8-A). NOT published — players who want LaTeX install AUI + KubeJS themselves. MixinExtras
+        // is already bundled by Forge (exclude to avoid a duplicate service module); animated-gif-lib
+        // lives only on JitPack (excluded — KubeJS only needs it for gif assets we never load).
+        modLocalRuntime("dev.latvian.mods:kubejs-forge:${property("deps.kubejs")}") {
+            excludeAnimatedGifLib()
+            exclude(group = "io.github.llamalad7")
+        }
     } else {
         modCompileOnly("dev.latvian.mods:kubejs-neoforge:${property("deps.kubejs")}") { excludeAnimatedGifLib() }
         modCompileOnly("dev.latvian.mods:rhino:${property("deps.rhino")}")
     }
+
+    // ApricityUI (晴雪UI) — client-side world rendering, SOFT dependency (compile-only; players install
+    // it separately, and the renderer falls back to no-op without it — see api/render + client/).
+    // Artifact id is loader+MC qualified; versions differ (Forge is AUI's primary target, NeoForge lags).
+    // `isTransitive = false`: AUI's POM declares optional soft-integration deps (JitPack animated-gif-lib,
+    // Modrinth sodium/iris/jei/lan-server-properties) that live on repos we don't have; we only compile
+    // against AUI's own API (ApricityUI/WorldWindow/Document/Element), so drop the transitives.
+    // Dev runClient does NOT bundle AUI, so the renderer stays no-op in dev unless AUI is added to the
+    // runtime classpath (e.g. modLocalRuntime). See docs/references/apricity-ui.md.
+    if (loader == ModPlatform.FORGE) {
+        modCompileOnly("com.sighs:ApricityUI-forge-1.20.1:${property("deps.aui")}") { isTransitive = false }
+        // Dev-only: also load AUI in the Forge runClient so the world renderer actually activates
+        // (P8-A in-game verification). modLocalRuntime is NOT published. NeoForge is intentionally
+        // left out for now (older AUI 1.1.2, not yet verified under Loom dev).
+        modLocalRuntime("com.sighs:ApricityUI-forge-1.20.1:${property("deps.aui")}") { isTransitive = false }
+    } else {
+        modCompileOnly("com.sighs:ApricityUI-neoforge-1.21.1:${property("deps.aui")}") { isTransitive = false }
+    }
+
+    // JLaTeXMath — pure-Java LaTeX renderer (org.scilab.forge). The renderer rasterizes each question
+    // to a white-on-transparent PNG on the JVM side and hands it to AUI as an <img>, so math renders
+    // without KaTeX / page JS / KubeJS.
+    //   - `implementation`        → compile classpath (mod code references TeXFormula/TeXIcon).
+    //   - `forgeRuntimeLibrary`   → dev runClient classpath. Forge/NeoForge ModLauncher does NOT load
+    //                               plain `implementation` libraries into the mod's transforming
+    //                               classloader, so without this every TeXFormula(...) throws
+    //                               NoClassDefFoundError at runtime (same reason KLF's stdlib needs it
+    //                               on NeoForge above). Puts the jar on the dev boot/runtime classpath.
+    //   - `include`               → production Jar-in-Jar so shipped players don't install it.
+    implementation("org.scilab.forge:jlatexmath:1.0.7")
+    "forgeRuntimeLibrary"("org.scilab.forge:jlatexmath:1.0.7")
+    include("org.scilab.forge:jlatexmath:1.0.7")
 
     // 单元测试（纯 Kotlin 逻辑）。
     testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")

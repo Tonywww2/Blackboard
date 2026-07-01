@@ -4,6 +4,7 @@ import com.tonywww.blackboard.api.BlackboardApi
 import net.minecraft.world.item.Item
 import net.minecraft.world.level.block.Block
 import net.minecraft.world.level.block.entity.BlockEntityType
+import net.minecraft.world.level.levelgen.feature.Feature
 //? if forge {
 import net.minecraftforge.registries.DeferredRegister
 import net.minecraftforge.registries.ForgeRegistries
@@ -47,6 +48,16 @@ object PlatformRegistration {
         ForgeRegistries.BLOCK_ENTITY_TYPES,
         //?} else {
         /*Registries.BLOCK_ENTITY_TYPE,
+        *///?}
+        BlackboardApi.MOD_ID,
+    )
+
+    /** Create a worldgen-[Feature] [DeferredRegister]. */
+    fun features(): DeferredRegister<Feature<*>> = DeferredRegister.create(
+        //? if forge {
+        ForgeRegistries.FEATURES,
+        //?} else {
+        /*Registries.FEATURE,
         *///?}
         BlackboardApi.MOD_ID,
     )

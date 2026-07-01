@@ -1,0 +1,6 @@
+{
+  "type": "neoforge:add_features",
+  "biomes": "#blackboard:has_blackboard",
+  "features": "blackboard:blackboard",
+  "step": "vegetal_decoration"
+}

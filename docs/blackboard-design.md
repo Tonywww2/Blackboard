@@ -155,6 +155,8 @@ interface RenderContext {
     val level: Level
     val pos: BlockPos
     val blockState: BlockState
+    /** 黑板可寻址标识（与题面一起显示）。 */
+    val boardId: String
     /** 题面内容（可含 LaTeX），直接交给 AUI 渲染。 */
     val content: Component
 }

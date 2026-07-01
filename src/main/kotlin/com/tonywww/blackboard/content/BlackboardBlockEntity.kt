@@ -104,6 +104,14 @@ open class BlackboardBlockEntity(pos: BlockPos, state: BlockState) :
         serverLevel.destroyBlock(blockPos, false)
     }
 
+    override fun setRemoved() {
+        super.setRemoved()
+        // Client-side: tear down the in-world render for this board when it is removed (block broken /
+        // chunk unloaded), so the panel does not linger after the blackboard is gone.
+        val lvl = level
+        if (lvl != null && lvl.isClientSide) BlackboardRendering.renderer.remove(blockPos)
+    }
+
     private fun refreshClientRender() {
         val lvl = level ?: return
         if (!lvl.isClientSide) return
@@ -111,6 +119,7 @@ open class BlackboardBlockEntity(pos: BlockPos, state: BlockState) :
         BlackboardRendering.renderer.render(object : RenderContext {
             override val level: Level = lvl
             override val pos: BlockPos = blockPos
+            override val boardId: String = this@BlackboardBlockEntity.boardId
             override val blockState: BlockState = this@BlackboardBlockEntity.blockState
             override val content: Component = q.content
         })
