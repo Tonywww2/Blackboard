@@ -19,35 +19,35 @@ import net.minecraft.util.RandomSource
 object BuiltinGenerators {
 
     val ADDITION: QuestionGenerator = mathGen(id("addition"), weight = 10) { r, d ->
-        val hi = ceiling(99, 90, d)
+        val hi = ceiling(99, 250, d)
         val a = r.nextIntBetweenInclusive(1, hi)
         val b = r.nextIntBetweenInclusive(1, hi)
         "$a + $b = ?" to (a + b)
     }
 
     val SUBTRACTION: QuestionGenerator = mathGen(id("subtraction"), weight = 10) { r, d ->
-        val hi = ceiling(99, 90, d)
+        val hi = ceiling(99, 250, d)
         val a = r.nextIntBetweenInclusive(1, hi)
         val b = r.nextIntBetweenInclusive(0, a)
         "$a - $b = ?" to (a - b)
     }
 
     val MULTIPLICATION: QuestionGenerator = mathGen(id("multiplication"), weight = 8) { r, d ->
-        val hi = ceiling(12, 6, d)
+        val hi = ceiling(12, 10, d)
         val a = r.nextIntBetweenInclusive(2, hi)
         val b = r.nextIntBetweenInclusive(2, hi)
         "$a * $b = ?" to (a * b)
     }
 
     val DIVISION: QuestionGenerator = mathGen(id("division"), weight = 6) { r, d ->
-        val hi = ceiling(12, 6, d)
+        val hi = ceiling(12, 8, d)
         val b = r.nextIntBetweenInclusive(2, hi)
         val q = r.nextIntBetweenInclusive(1, hi)
         "${b * q} / $b = ?" to q
     }
 
     val SQUARE: QuestionGenerator = mathGen(id("square"), weight = 5) { r, d ->
-        val hi = ceiling(20, 12, d)
+        val hi = ceiling(20, 30, d)
         val a = r.nextIntBetweenInclusive(2, hi)
         "$a^2 = ?" to (a * a)
     }

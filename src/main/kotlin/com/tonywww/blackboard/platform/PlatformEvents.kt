@@ -6,6 +6,7 @@ import com.tonywww.blackboard.chat.ChatHandler
 import com.tonywww.blackboard.content.BlackboardBlockEntity
 import com.tonywww.blackboard.core.BlackboardManager
 import com.tonywww.blackboard.core.GeneratorReload
+import com.mojang.brigadier.arguments.IntegerArgumentType
 import net.minecraft.commands.CommandSourceStack
 import net.minecraft.commands.Commands
 import net.minecraft.commands.arguments.ResourceLocationArgument
@@ -125,8 +126,40 @@ object PlatformEvents {
                         )
                         if (q != null) 1 else 0
                     },
+                )
+                .then(
+                    // /blackboard difficulty <0..10> | clear — 设置/清除注视黑板的每板难度覆盖并重新出题。
+                    Commands.literal("difficulty")
+                        .then(
+                            Commands.argument("value", IntegerArgumentType.integer(0, 10)).executes { ctx ->
+                                setBoardDifficulty(ctx.source, IntegerArgumentType.getInteger(ctx, "value"))
+                            },
+                        )
+                        .then(
+                            Commands.literal("clear").executes { ctx -> setBoardDifficulty(ctx.source, null) },
+                        ),
                 ),
         )
+    }
+
+    /**
+     * 设置（或用 `null` 清除）注视黑板的每板难度覆盖并重新出题，向来源反馈；未注视黑板返回 0。
+     */
+    private fun setBoardDifficulty(source: CommandSourceStack, value: Int?): Int {
+        val be = lookedAtBoard(source) ?: return 0
+        if (be.blackboardTypeId == null) be.setBlackboardType(BlackboardApi.DEFAULT_TYPE_ID)
+        be.setDifficultyOverride(value)
+        val q = BlackboardManager.generateQuestion(be, source.player)
+        val label = value?.let { "set difficulty to $it" } ?: "cleared difficulty override"
+        source.sendSuccess(
+            {
+                Component.literal(
+                    "Blackboard: $label" + if (q == null) " (no question could be generated)" else " and regenerated",
+                )
+            },
+            true,
+        )
+        return if (q != null) 1 else 0
     }
 
     /**

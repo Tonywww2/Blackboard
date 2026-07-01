@@ -59,6 +59,10 @@ open class BlackboardBlockEntity(pos: BlockPos, state: BlockState) :
     var generatorId: ResourceLocation? = null
         private set
 
+    /** Per-board difficulty override (set by `/blackboard difficulty`); `null` = use config base + type modifier. */
+    var difficultyOverride: Int? = null
+        private set
+
     /** Resolves [blackboardTypeId] against the frozen registry, or `null` if absent/unknown. */
     val blackboardType: BlackboardType?
         get() = blackboardTypeId?.let { BlackboardRegistries.BLACKBOARD_TYPES.get(it) }
@@ -74,6 +78,12 @@ open class BlackboardBlockEntity(pos: BlockPos, state: BlockState) :
     /** Sets the governing blackboard type (server-side). */
     fun setBlackboardType(id: ResourceLocation?) {
         blackboardTypeId = id
+        setChanged()
+    }
+
+    /** Sets (or clears with `null`) this board's difficulty override (server-side). */
+    fun setDifficultyOverride(value: Int?) {
+        difficultyOverride = value
         setChanged()
     }
 
@@ -181,6 +191,7 @@ open class BlackboardBlockEntity(pos: BlockPos, state: BlockState) :
     private fun writeSaveData(tag: CompoundTag, registries: HolderLookup.Provider) {
         blackboardTypeId?.let { tag.putString(KEY_TYPE, it.toString()) }
         generatorId?.let { tag.putString(KEY_GENERATOR, it.toString()) }
+        difficultyOverride?.let { tag.putInt(KEY_DIFFICULTY, it) }
         if (boardId.isNotEmpty()) tag.putString(KEY_BOARD_ID, boardId)
         tag.putInt(KEY_ATTEMPTS, attempts)
         question?.let { tag.put(KEY_QUESTION, it.toNbt(registries)) }
@@ -191,6 +202,7 @@ open class BlackboardBlockEntity(pos: BlockPos, state: BlockState) :
             if (tag.contains(KEY_TYPE)) ResourceLocation.tryParse(tag.getString(KEY_TYPE)) else null
         generatorId =
             if (tag.contains(KEY_GENERATOR)) ResourceLocation.tryParse(tag.getString(KEY_GENERATOR)) else null
+        difficultyOverride = if (tag.contains(KEY_DIFFICULTY)) tag.getInt(KEY_DIFFICULTY) else null
         boardId = tag.getString(KEY_BOARD_ID)
         attempts = tag.getInt(KEY_ATTEMPTS)
         question =
@@ -208,6 +220,7 @@ open class BlackboardBlockEntity(pos: BlockPos, state: BlockState) :
     companion object {
         private const val KEY_TYPE = "Type"
         private const val KEY_GENERATOR = "Generator"
+        private const val KEY_DIFFICULTY = "Difficulty"
         private const val KEY_BOARD_ID = "BoardId"
         private const val KEY_ATTEMPTS = "Attempts"
         private const val KEY_QUESTION = "Question"

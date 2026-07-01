@@ -45,6 +45,14 @@ class BlackboardEventsTest {
     }
 
     @Test
+    fun `select event difficulty is mutable and carries the initial value`() {
+        val event = SelectGeneratorEvent(selectionContext(), mutableListOf(), 2)
+        assertEquals(2, event.difficulty)
+        event.difficulty = 5
+        assertEquals(5, event.difficulty)
+    }
+
+    @Test
     fun `aggregator exposes four distinct hooks`() {
         val hooks = setOf(
             BlackboardEvents.SELECT_GENERATOR,

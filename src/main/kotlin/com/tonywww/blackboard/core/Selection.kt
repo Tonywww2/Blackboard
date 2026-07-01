@@ -11,32 +11,37 @@ import com.tonywww.blackboard.api.registry.SimpleRegistry
 import com.tonywww.blackboard.api.registry.resolve
 import net.minecraft.util.RandomSource
 
+/** 选题结果：选中的生成器 + 本次难度（可能已被 [BlackboardEvents.SELECT_GENERATOR] 监听器改写）。 */
+data class GeneratorSelection(val generator: QuestionGenerator, val difficulty: Int)
+
 /**
  * 选题主流程（internal-core-api §6 的权威实现）：
  *
  * 1. 由 [BlackboardType.pool] 解析候选并包装为 [WeightedGenerator]；
- * 2. 广播 [BlackboardEvents.SELECT_GENERATOR]，开发者可增删候选、改权重，或设置 `forced`；
- * 3. 若事件设置了 `forced` 则直接返回；
+ * 2. 广播 [BlackboardEvents.SELECT_GENERATOR]，开发者可增删候选、改权重、设置 `forced`，或改写 `difficulty`；
+ * 3. 若事件设置了 `forced` 则直接返回（携带事件里的 `difficulty`）；
  * 4. 候选为空（未注册任何生成器 / 事件清空了候选）→ 返回 `null`，交由调用方优雅处理（不抛异常）；
  * 5. 否则交给 [BlackboardType.selector]（默认 [weightedRandomSelect]）。
  *
+ * @param difficulty 本次难度初值（全局基数 + 类型增量）；事件可改写，最终值随结果返回。
  * @param registry 候选来源，默认全局 [BlackboardRegistries.QUESTION_GENERATORS]（单测可注入）。
  */
 fun selectGenerator(
     type: BlackboardType,
     ctx: SelectionContext,
     registry: SimpleRegistry<QuestionGenerator> = BlackboardRegistries.QUESTION_GENERATORS,
-): QuestionGenerator? {
+    difficulty: Int = 0,
+): GeneratorSelection? {
     val candidates = type.pool.resolve(registry)
         .map { WeightedGenerator(it, it.weight) }
         .toMutableList()
 
-    val event = SelectGeneratorEvent(ctx, candidates)
+    val event = SelectGeneratorEvent(ctx, candidates, difficulty)
     BlackboardEvents.SELECT_GENERATOR.invoke(event)
 
-    event.forced?.let { return it }
+    event.forced?.let { return GeneratorSelection(it, event.difficulty) }
     if (event.candidates.isEmpty()) return null // 无候选（题库空/被清空）——避免崩溃，返回 null
-    return type.selector(event.candidates, ctx)
+    return GeneratorSelection(type.selector(event.candidates, ctx), event.difficulty)
 }
 
 /**

@@ -82,7 +82,15 @@ class AuiBlackboardRenderer : BlackboardRenderer {
         //? if forge {
         element.setTextContent(value)
         //?} else {
-        /*element.innerText = value
+        /*if (element.innerText == value) return
+        // AUI 1.1.2 无 setTextContent。文本变更照搬 Element.setAttribute("value", …) 的失效流程：
+        // 写字段 + 清 text/wrappedText 渲染缓存 + invalidateStyle()（内部 requestStyleRecalc 触发重排）。
+        // 切勿用 document.refresh()——它会从 board.html 整树重新解析、重建 DOM，反而抹掉刚写入的文本。
+        // 另注：1.1.2 的 <div> 不绘制 innerText（Div.drawPhase 未调用基类 drawInnerText），故模板里 board-id 用 <span>。
+        element.innerText = value
+        val renderer = element.getRenderer()
+        renderer.text.clear()
+        renderer.wrappedText.clear()
         element.invalidateStyle()
         *///?}
     }
@@ -105,7 +113,7 @@ class AuiBlackboardRenderer : BlackboardRenderer {
         const val HEIGHT = 100f // 2 blocks
         const val MAX_DISTANCE = 16
         const val BOARD_CENTER_Y = 2.0 // board vertical centre, in blocks above the block's base corner
-        const val ALONG_NORMAL = -0.25 // panel-centre offset from block centre along the facing normal (less negative = further back / away from viewer)
+        const val ALONG_NORMAL = -0.3125 // panel-centre offset from block centre along the facing normal (less negative = further back / away from viewer)
         const val CONTENT_W = 134.0 // usable content width in px (panel minus horizontal padding)
         const val CONTENT_H = 72.0 // usable content height in px (panel minus board-id and padding)
     }

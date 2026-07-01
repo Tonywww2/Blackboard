@@ -72,15 +72,23 @@ object BlackboardManager {
                         null
                     }
             }
-            val generator = pinned ?: selectGenerator(type, selCtx)
-            if (generator == null) {
-                logger.warn("黑板 {} 无可用题目生成器（选题池为空），暂不出题", type.id)
-                return null
+            // 每板难度覆盖（/blackboard difficulty 指令）优先；否则全局配置基数 + 该黑板类型的增量。夹到 0..10。
+            val baseDifficulty =
+                (be.difficultyOverride ?: (BlackboardConfig.difficultyBase.get() + type.difficultyModifier)).coerceIn(0, 10)
+            // 绑定生成器（物品 NBT）优先并跳过选题事件；否则走选题流程——SELECT_GENERATOR 事件可增删候选/
+            // 改权重/强制生成器，也可改写本次难度（SelectGeneratorEvent.difficulty）。
+            val selection = if (pinned != null) {
+                GeneratorSelection(pinned, baseDifficulty)
+            } else {
+                selectGenerator(type, selCtx, difficulty = baseDifficulty)
+                    ?: run {
+                        logger.warn("黑板 {} 无可用题目生成器（选题池为空），暂不出题", type.id)
+                        return null
+                    }
             }
-            // 难度 = 全局配置基数 + 该黑板类型的增量，夹到 0..10（负数按最简单处理）。
-            val difficulty = (BlackboardConfig.difficultyBase.get() + type.difficultyModifier).coerceIn(0, 10)
+            val difficulty = selection.difficulty.coerceIn(0, 10) // 事件可能把难度改到范围外，再夹一次
             val genCtx = GenerationContextImpl(level, pos, state, type, level.random, player, difficulty)
-            generator.generate(genCtx)
+            selection.generator.generate(genCtx)
         } catch (e: Throwable) {
             logger.error("出题失败 board=${be.boardId} type=${type.id}", e)
             return null

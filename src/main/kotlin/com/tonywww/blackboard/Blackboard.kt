@@ -69,8 +69,10 @@ object Blackboard {
         BuiltinGenerators.register()
         BuiltinBlackboardTypes.register()
 
-        // Calculus module generators + its ByTag(CALCULUS) blackboard type (before freeze).
-        CalculusGenerators.register()
+        // Calculus module generators + its ByTag(CALCULUS) blackboard type (before freeze). Generators go
+        // through the reloadable REGISTER_GENERATORS layer so pool.calculusInDefaultPool (config, not yet
+        // loaded at construction) can be read on server start / /blackboard reload.
+        CalculusGenerators.registerReloadable()
         CalculusGenerators.registerType()
 
         // Soft dependency: only touch the KubeJS plugin class when KubeJS is loaded, otherwise its

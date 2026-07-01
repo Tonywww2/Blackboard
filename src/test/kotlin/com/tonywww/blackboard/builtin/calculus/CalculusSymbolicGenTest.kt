@@ -69,6 +69,24 @@ class CalculusSymbolicGenTest {
     }
 
     @Test
+    fun `symbolic self-answers validate across all difficulties`() {
+        val gens = listOf(CalculusGenerators.DIFFERENTIATION, CalculusGenerators.INDEF_INTEGRAL)
+        for (gen in gens) {
+            for (diff in 0..10) {
+                for (seed in 1L..20L) {
+                    val q = gen.generate(genCtx(seed, diff))
+                    val ans = q.getString("answer")
+                    assertInstanceOf(
+                        AnswerResult.Correct::class.java,
+                        gen.validate(q, ansCtx(ans)),
+                        "gen=${gen.id} diff=$diff seed=$seed ans=$ans",
+                    )
+                }
+            }
+        }
+    }
+
+    @Test
     fun `symbolic questions store required data keys`() {
         val cases = listOf(CalculusGenerators.DIFFERENTIATION to false, CalculusGenerators.INDEF_INTEGRAL to true)
         for ((gen, isIntegral) in cases) {

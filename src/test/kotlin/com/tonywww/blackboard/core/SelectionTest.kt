@@ -82,7 +82,7 @@ class SelectionTest {
             if (e.candidates.any { it.generator.id.path == "forced_pool_marker" }) e.forced = forced
         }
         val type = typeWith(GeneratorPool.All) { c, _ -> c.first().generator }
-        assertSame(forced, selectGenerator(type, selCtx(), reg))
+        assertSame(forced, selectGenerator(type, selCtx(), reg)?.generator)
     }
 
     @Test
@@ -93,7 +93,7 @@ class SelectionTest {
         reg.register(x)
         reg.register(y)
         val type = typeWith(GeneratorPool.All) { c, _ -> c.last().generator }
-        assertSame(y, selectGenerator(type, selCtx(), reg)) // last in registration order
+        assertSame(y, selectGenerator(type, selCtx(), reg)?.generator) // last in registration order
     }
 
     @Test

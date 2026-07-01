@@ -36,4 +36,12 @@ class SelectGeneratorKubeEvent(server: MinecraftServer, private val native: Sele
     fun force(id: ResourceLocation) {
         BlackboardRegistries.QUESTION_GENERATORS.get(id)?.let { native.forced = it }
     }
+
+    /** Current question difficulty for this selection (global base + blackboard-type modifier). */
+    fun getDifficulty(): Int = native.difficulty
+
+    /** Override the difficulty for this question; the generation flow clamps it to `0..10`. */
+    fun setDifficulty(difficulty: Int) {
+        native.difficulty = difficulty
+    }
 }

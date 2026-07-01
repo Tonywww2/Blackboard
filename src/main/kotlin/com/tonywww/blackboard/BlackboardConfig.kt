@@ -39,6 +39,17 @@ object BlackboardConfig {
         .comment("Base question difficulty (0 = easiest, higher = harder). Per-blackboard-type modifiers add to this; the total is clamped to 0..10.")
         .defineInRange("question.difficultyBase", 0, -8, 8)
 
+    /**
+     * Whether the calculus question generators (derivative-at-point, definite/indefinite integral,
+     * differentiation, limit) are also added to the default blackboard pool (`#blackboard:default`), so
+     * ordinary blackboards can show calculus questions. Off by default (calculus stays on its own
+     * `blackboard:calculus` type). Applied on server start and `/blackboard reload`. Config key
+     * `pool.calculusInDefaultPool`.
+     */
+    val calculusInDefaultPool: ForgeConfigSpec.BooleanValue = builder
+        .comment("Whether calculus question generators are also added to the default blackboard pool, so ordinary blackboards can show calculus questions. Applied on server start / /blackboard reload.")
+        .define("pool.calculusInDefaultPool", false)
+
     /** The built config spec, registered by [register]. */
     val SPEC: ForgeConfigSpec = builder.build()
 

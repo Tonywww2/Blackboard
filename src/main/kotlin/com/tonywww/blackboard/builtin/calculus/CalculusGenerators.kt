@@ -1,9 +1,11 @@
 package com.tonywww.blackboard.builtin.calculus
 
+import com.tonywww.blackboard.BlackboardConfig
 import com.tonywww.blackboard.api.BlackboardApi
 import com.tonywww.blackboard.api.BlackboardApi.BlackboardTags
 import com.tonywww.blackboard.api.board.BlackboardType
 import com.tonywww.blackboard.api.board.GeneratorPool
+import com.tonywww.blackboard.api.event.BlackboardEvents
 import com.tonywww.blackboard.api.question.AnswerContext
 import com.tonywww.blackboard.api.question.AnswerResult
 import com.tonywww.blackboard.api.question.Question
@@ -24,7 +26,7 @@ import net.minecraft.util.RandomSource
  *
  * 阶段一：数值答案题型（G/I/J）——`content`=题面 LaTeX、`prompt`=infix 兜底、`data["answer"]`=整数答案，
  * 判题直接用 [Validators.number]。生成器打 `#blackboard:calculus` 标签；配套内置黑板类型 [CALCULUS_TYPE]
- * 用 `ByTag(CALCULUS)` 选题。入口 `Blackboard.kt` 在冻结前调 [register] + [registerType]。
+ * 用 `ByTag(CALCULUS)` 选题。入口 `Blackboard.kt` 在冻结前调 [registerReloadable] + [registerType]。
  */
 object CalculusGenerators {
 
@@ -60,12 +62,30 @@ object CalculusGenerators {
             .maxAttempts(0)
             .build()
 
-    /** 注册全部微积分生成器（须在注册表冻结前调用）。 */
-    fun register() {
-        ALL.forEach { BlackboardRegistries.QUESTION_GENERATORS.register(it) }
+    /**
+     * 将微积分生成器注册到**可热重载层**（[BlackboardEvents.REGISTER_GENERATORS]）。
+     *
+     * 之所以走事件层而非 init 直接写基线：需读配置 [BlackboardConfig.calculusInDefaultPool]，而该配置在 mod
+     * 构造期尚未加载；本事件在服务器启动（配置已加载）时触发，`/blackboard reload` 也会重跑——改配置后
+     * 重载即可让微积分题目即时进/出默认池。开启时给每个生成器追加 `#blackboard:default` 标签（保留 `#blackboard:calculus`）。
+     */
+    fun registerReloadable() {
+        BlackboardEvents.REGISTER_GENERATORS.register { event ->
+            val inDefault = BlackboardConfig.calculusInDefaultPool.get()
+            for (gen in ALL) event.register(if (inDefault) withDefaultTag(gen) else gen)
+        }
     }
 
-    /** 注册微积分黑板类型（须在冻结前、且在 [register] 之后调用）。 */
+    /** 克隆生成器并追加 `#blackboard:default` 标签（其余不变）。 */
+    private fun withDefaultTag(gen: QuestionGenerator): QuestionGenerator =
+        QuestionGenerator.builder(gen.id)
+            .tag(*gen.tags.toTypedArray(), BlackboardTags.DEFAULT)
+            .weight(gen.weight)
+            .generate(gen.generate)
+            .validate(gen.validate)
+            .build()
+
+    /** 注册微积分黑板类型（须在冻结前、且在 [registerReloadable] 之后调用）。 */
     fun registerType() {
         BlackboardRegistries.BLACKBOARD_TYPES.register(CALCULUS_TYPE)
     }

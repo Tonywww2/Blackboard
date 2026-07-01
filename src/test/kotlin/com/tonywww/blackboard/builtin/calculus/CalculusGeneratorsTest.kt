@@ -62,6 +62,29 @@ class CalculusGeneratorsTest {
     }
 
     @Test
+    fun `numeric self-answers are finite and validate across all difficulties`() {
+        val gens = listOf(
+            CalculusGenerators.DERIV_AT_POINT,
+            CalculusGenerators.DEF_INTEGRAL,
+            CalculusGenerators.LIMIT,
+        )
+        for (gen in gens) {
+            for (diff in 0..10) {
+                for (seed in 1L..20L) {
+                    val q = gen.generate(genCtx(seed, diff))
+                    val correct = q.getDouble("answer")
+                    assertTrue(correct.isFinite(), "gen=${gen.id} diff=$diff seed=$seed non-finite answer")
+                    assertInstanceOf(
+                        AnswerResult.Correct::class.java,
+                        gen.validate(q, ansCtx(correct.toString())), // toString 覆盖整数与分数答案
+                        "gen=${gen.id} diff=$diff seed=$seed",
+                    )
+                }
+            }
+        }
+    }
+
+    @Test
     fun `validate is three-state`() {
         val gen = CalculusGenerators.DERIV_AT_POINT
         val q = gen.generate(genCtx(5, 0))

@@ -117,12 +117,18 @@ dependencies {
     // runtime classpath (e.g. modLocalRuntime). See docs/references/apricity-ui.md.
     if (loader == ModPlatform.FORGE) {
         modCompileOnly("com.sighs:ApricityUI-forge-1.20.1:${property("deps.aui")}") { isTransitive = false }
-        // Dev-only: also load AUI in the Forge runClient so the world renderer actually activates
-        // (P8-A in-game verification). modLocalRuntime is NOT published. NeoForge is intentionally
-        // left out for now (older AUI 1.1.2, not yet verified under Loom dev).
+        // Dev-only: also load AUI in the runClient so the world renderer actually activates. modLocalRuntime
+        // is NOT published. isTransitive=false drops AUI's optional soft-integration deps (Modrinth
+        // sodium/iris/jei, KubeJS/Rhino) — the JLaTeXMath <img> renderer needs none of them.
         modLocalRuntime("com.sighs:ApricityUI-forge-1.20.1:${property("deps.aui")}") { isTransitive = false }
     } else {
         modCompileOnly("com.sighs:ApricityUI-neoforge-1.21.1:${property("deps.aui")}") { isTransitive = false }
+        // Dev-only: load AUI in the NeoForge runClient too, so the renderer activates on 1.21.1.
+        // AUI-neoforge 1.1.2's neoforge.mods.toml only hard-requires neoforge+minecraft (its
+        // kubejs/rhino/Modrinth deps are optional soft integrations), so isTransitive=false is safe and
+        // the <img> renderer works standalone. JLaTeXMath is already on the run classpath via
+        // forgeRuntimeLibrary (unconditional, below).
+        modLocalRuntime("com.sighs:ApricityUI-neoforge-1.21.1:${property("deps.aui")}") { isTransitive = false }
     }
 
     // JLaTeXMath — pure-Java LaTeX renderer (org.scilab.forge). The renderer rasterizes each question
