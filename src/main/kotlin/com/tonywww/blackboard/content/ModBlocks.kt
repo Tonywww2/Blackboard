@@ -22,6 +22,8 @@ object ModBlocks {
         BlockBehaviour.Properties.of()
             .mapColor(MapColor.COLOR_BLACK)
             .strength(1.5f)
+            // 非满方块/透明模型：关闭遮挡，避免相邻方块的面被错误剔除。
+            .noOcclusion()
 
     fun register(bus: IEventBus) {
         REGISTER.register(bus)

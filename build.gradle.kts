@@ -52,13 +52,30 @@ dependencies {
 
     // Kotlin language adapter / runtime (modLoader = "klf").
     modImplementation("dev.nyon:KotlinLangForge:${property("deps.klf")}") {
-        // Loom remaps KLF's transitive kotlin-stdlib into a jar that keeps the
-        // `Multi-Release: true` manifest flag but drops META-INF/versions/. On
-        // Forge 1.20.1 this crashes securejarhandler 2.1.10's ClasspathLocator
-        // (UnionFileSystem NoSuchFileException: /META-INF/versions) during dev
-        // mod discovery. The Kotlin Gradle plugin already supplies a proper
-        // kotlin-stdlib (with META-INF/versions/), so drop the remapped copy.
-        exclude(group = "org.jetbrains.kotlin", module = "kotlin-stdlib")
+        if (loader == ModPlatform.FORGE) {
+            // Forge 1.20.1 ONLY: Loom remaps KLF's transitive kotlin-stdlib into a jar that keeps
+            // the `Multi-Release: true` manifest flag but drops META-INF/versions/, which crashes
+            // securejarhandler 2.1.10's ClasspathLocator (UnionFileSystem NoSuchFileException:
+            // /META-INF/versions) during dev mod discovery. Forge's language provider can see the
+            // Kotlin Gradle plugin's stdlib, so dropping the remapped copy is safe here.
+            exclude(group = "org.jetbrains.kotlin", module = "kotlin-stdlib")
+        }
+    }
+
+    // NeoForge 1.21.1 dev ONLY: KLF's language provider (`KotlinLanguageLoader`) loads in FML's
+    // isolated service/plugin module layer ("LAYER PLUGIN"), which does NOT see the remapped Kotlin
+    // mods on the game classpath. In production NeoForge extracts KLF's JiJ'd kotlin-stdlib into that
+    // layer, but Architectury Loom's userdev locator does not process KLF's Jar-in-Jar, so the
+    // provider can't resolve `kotlin.Pair` and FML reports `Missing language klf` (see moddevgradle,
+    // which the KLF author's own mods use, does this automatically).
+    //
+    // `forgeRuntimeLibrary` puts these on the dev boot/runtime classpath (as automatic modules
+    // readable by KLF's automatic module) so the provider can instantiate. KotlinLanguageLoader and
+    // the other dev/nyon/klf classes reference only kotlin-stdlib + kotlin.reflect.KClass.
+    // Dev-only: production is unaffected (KLF ships these via Jar-in-Jar).
+    if (loader == ModPlatform.NEOFORGE) {
+        "forgeRuntimeLibrary"("org.jetbrains.kotlin:kotlin-stdlib:${libs.versions.kotlin.get()}")
+        "forgeRuntimeLibrary"("org.jetbrains.kotlin:kotlin-reflect:${libs.versions.kotlin.get()}")
     }
 
     // KubeJS — soft dependency (compile-only; not bundled, not required at runtime).

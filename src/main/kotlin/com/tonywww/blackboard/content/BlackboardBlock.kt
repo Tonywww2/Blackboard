@@ -77,15 +77,22 @@ class BlackboardBlock(properties: BlockBehaviour.Properties) : BaseEntityBlock(p
 
     /**
      * Debug interaction: when [BlackboardConfig.tellQuestionOnShiftClick] is enabled and the player is
-     * sneaking, sends them the current question's text component (server-side). Otherwise returns
+     * sneaking, sends them the current question's text component **and the board's `boardId`**
+     * (server-side) so they can answer via `!ans <boardId> <answer>`. Otherwise returns
      * [InteractionResult.PASS] so normal (non-sneak) interaction and placement are unaffected.
      */
     private fun tellQuestion(level: Level, pos: BlockPos, player: Player): InteractionResult {
         if (!player.isSecondaryUseActive) return InteractionResult.PASS
         if (!BlackboardConfig.tellQuestionOnShiftClick.get()) return InteractionResult.PASS
         if (!level.isClientSide) {
-            val content = (level.getBlockEntity(pos) as? BlackboardBlockEntity)?.question?.content
-            player.sendSystemMessage(content ?: Component.literal("[Blackboard] 该黑板暂无题目"))
+            val be = level.getBlockEntity(pos) as? BlackboardBlockEntity
+            val question = be?.question
+            if (be != null && question != null) {
+                player.sendSystemMessage(question.content)
+                player.sendSystemMessage(Component.literal("[Blackboard] boardId: ${be.boardId}"))
+            } else {
+                player.sendSystemMessage(Component.literal("[Blackboard] 该黑板暂无题目"))
+            }
         }
         return InteractionResult.sidedSuccess(level.isClientSide)
     }
