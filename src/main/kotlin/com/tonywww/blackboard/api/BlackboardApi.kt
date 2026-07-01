@@ -18,11 +18,13 @@ object BlackboardApi {
     @Suppress("DEPRECATION") // 1.20.1's public ResourceLocation(ns, path) constructor is the standard path.
     fun id(path: String): ResourceLocation =
         //? if forge {
-        ResourceLocation(MOD_ID, path)
+        ResourceLocation.fromNamespaceAndPath(MOD_ID, path)
         //?} else {
         /*ResourceLocation.fromNamespaceAndPath(MOD_ID, path)
         *///?}
-
+    /** Well-known id of the built-in default blackboard type (`blackboard:default`). */
+    @JvmField
+    val DEFAULT_TYPE_ID: ResourceLocation = id("default")
     /** Built-in tags used to group generators / blackboard pools. */
     object BlackboardTags {
         @JvmField

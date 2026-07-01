@@ -1,13 +1,19 @@
 package com.tonywww.blackboard.platform
 
+import com.tonywww.blackboard.api.BlackboardApi
+import com.tonywww.blackboard.api.registry.BlackboardRegistries
 import com.tonywww.blackboard.chat.ChatHandler
 import com.tonywww.blackboard.content.BlackboardBlockEntity
 import com.tonywww.blackboard.core.BlackboardManager
 import com.tonywww.blackboard.core.GeneratorReload
+import net.minecraft.commands.CommandSourceStack
 import net.minecraft.commands.Commands
+import net.minecraft.commands.arguments.ResourceLocationArgument
 import net.minecraft.network.chat.Component
 import net.minecraft.server.level.ServerLevel
+import net.minecraft.world.level.ClipContext
 import net.minecraft.world.level.chunk.LevelChunk
+import net.minecraft.world.phys.HitResult
 //? if forge {
 import net.minecraftforge.event.RegisterCommandsEvent
 import net.minecraftforge.event.ServerChatEvent
@@ -56,7 +62,7 @@ object PlatformEvents {
         BlackboardManager.clearAll()
     }
 
-    /** 注册指令：`/blackboard reload` 热重载题目生成器（权限等级 2）。 */
+    /** 注册指令（权限等级 2）：`/blackboard reload` 热重载生成器；`settype`/`generate` 作用于玩家注视的黑板。 */
     @SubscribeEvent
     fun onRegisterCommands(event: RegisterCommandsEvent) {
         event.dispatcher.register(
@@ -70,8 +76,71 @@ object PlatformEvents {
                         )
                         count
                     },
+                )
+                .then(
+                    // /blackboard settype <typeId> — 把注视的黑板改为指定类型并重新出题（让自定义类型/池可在世界内使用）。
+                    Commands.literal("settype").then(
+                        Commands.argument("type", ResourceLocationArgument.id()).executes { ctx ->
+                            val typeId = ResourceLocationArgument.getId(ctx, "type")
+                            if (!BlackboardRegistries.BLACKBOARD_TYPES.contains(typeId)) {
+                                ctx.source.sendFailure(Component.literal("Blackboard: unknown blackboard type $typeId"))
+                                return@executes 0
+                            }
+                            val be = lookedAtBoard(ctx.source) ?: return@executes 0
+                            be.setBlackboardType(typeId)
+                            val q = BlackboardManager.generateQuestion(be, ctx.source.player)
+                            ctx.source.sendSuccess(
+                                {
+                                    Component.literal(
+                                        "Blackboard: set type to $typeId" +
+                                            if (q == null) " (no question could be generated)" else "",
+                                    )
+                                },
+                                true,
+                            )
+                            1
+                        },
+                    ),
+                )
+                .then(
+                    // /blackboard generate — 重新为注视的黑板出题（若未分配类型则先给默认类型）。
+                    Commands.literal("generate").executes { ctx ->
+                        val be = lookedAtBoard(ctx.source) ?: return@executes 0
+                        if (be.blackboardTypeId == null) be.setBlackboardType(BlackboardApi.DEFAULT_TYPE_ID)
+                        val q = BlackboardManager.generateQuestion(be, ctx.source.player)
+                        ctx.source.sendSuccess(
+                            {
+                                Component.literal(
+                                    if (q != null) "Blackboard: regenerated question"
+                                    else "Blackboard: failed (no candidate generator?)",
+                                )
+                            },
+                            true,
+                        )
+                        if (q != null) 1 else 0
+                    },
                 ),
         )
+    }
+
+    /**
+     * 服务端指令辅助：射线定位玩家正在注视的黑板方块实体；未注视方块 / 目标非黑板时向来源报错并返回 null。
+     */
+    private fun lookedAtBoard(source: CommandSourceStack): BlackboardBlockEntity? {
+        val player = source.playerOrException
+        val level = player.level()
+        val reach = 6.0
+        val eye = player.getEyePosition(1.0f)
+        val look = player.getViewVector(1.0f)
+        val end = eye.add(look.x * reach, look.y * reach, look.z * reach)
+        val hit = level.clip(ClipContext(eye, end, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player))
+        if (hit.type != HitResult.Type.BLOCK) {
+            source.sendFailure(Component.literal("Blackboard: look at a blackboard first"))
+            return null
+        }
+        val be = level.getBlockEntity(hit.blockPos) as? BlackboardBlockEntity
+        if (be == null) source.sendFailure(Component.literal("Blackboard: the target is not a blackboard"))
+        return be
     }
 
     /** 区块加载：登记其中的黑板，供 boardId 定位（P5-A 委托 P7-A 接线）。 */

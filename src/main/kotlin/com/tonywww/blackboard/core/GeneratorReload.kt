@@ -6,6 +6,7 @@ import com.tonywww.blackboard.api.question.QuestionGenerator
 import com.tonywww.blackboard.api.registry.BlackboardRegistries
 import com.tonywww.blackboard.api.registry.SimpleRegistry
 import com.tonywww.blackboard.api.registry.register
+import net.minecraft.resources.ResourceLocation
 import net.minecraft.server.MinecraftServer
 import org.slf4j.LoggerFactory
 
@@ -50,12 +51,14 @@ object GeneratorReload {
         val base = baseline ?: emptyList()
         val event = RegisterGeneratorsEvent(reason, server)
         BlackboardEvents.REGISTER_GENERATORS.invoke(event)
-        val added = rebuildInto(generators, base, event.collected())
+        val disabled = event.disabled()
+        val added = rebuildInto(generators, base, event.collected(), disabled)
         logger.info(
-            "生成器{}：基线 {} + 可重载 {} = 共 {}",
+            "生成器{}：基线 {} + 可重载 {} - 禁用 {} = 共 {}",
             if (reason == RegisterGeneratorsEvent.Reason.INITIAL) "初始化" else "热重载",
             base.size,
             added,
+            disabled.size,
             generators.all().size,
         )
     }
@@ -68,11 +71,16 @@ object GeneratorReload {
         reg: SimpleRegistry<QuestionGenerator>,
         baseline: List<QuestionGenerator>,
         contributed: List<QuestionGenerator>,
+        disabled: Set<ResourceLocation> = emptySet(),
     ): Int {
         reg.reopen()
-        for (gen in baseline) reg.register(gen)
+        for (gen in baseline) {
+            if (gen.id in disabled) continue // 被 REGISTER_GENERATORS 事件禁用的基线生成器
+            reg.register(gen)
+        }
         var added = 0
         for (gen in contributed) {
+            if (gen.id in disabled) continue
             if (reg.contains(gen.id)) {
                 logger.warn("忽略与启动基线重复的生成器 id：{}", gen.id)
                 continue

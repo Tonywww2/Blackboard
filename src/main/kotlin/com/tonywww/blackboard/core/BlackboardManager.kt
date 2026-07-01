@@ -1,5 +1,6 @@
 package com.tonywww.blackboard.core
 
+import com.tonywww.blackboard.api.BlackboardApi
 import com.tonywww.blackboard.api.event.BlackboardEvents
 import com.tonywww.blackboard.api.event.QuestionGeneratedEvent
 import com.tonywww.blackboard.api.question.Question
@@ -71,6 +72,18 @@ object BlackboardManager {
         BlackboardEvents.QUESTION_GENERATED.invoke(QuestionGeneratedEvent(level, pos, state, question, player))
         be.setQuestion(question)
         return question
+    }
+
+    /**
+     * 放置黑板时的接线（服务端）：分配 boardId 与默认黑板类型（若尚无）、登记索引、并出第一题。
+     * 由方块的 `setPlacedBy` 调用；[BlackboardApi.DEFAULT_TYPE_ID] 未注册时不出题（优雅降级）。
+     */
+    fun onPlaced(be: BlackboardBlockEntity, player: ServerPlayer? = null) {
+        val level = be.level as? ServerLevel ?: return
+        be.assignBoardIdIfAbsent(level.random)
+        if (be.blackboardTypeId == null) be.setBlackboardType(BlackboardApi.DEFAULT_TYPE_ID)
+        track(level, be)
+        generateQuestion(be, player)
     }
 
     /** 冻结注册表（注册阶段结束后调用；internal-core-api §10）。冻结后任何 `register` 抛错。 */

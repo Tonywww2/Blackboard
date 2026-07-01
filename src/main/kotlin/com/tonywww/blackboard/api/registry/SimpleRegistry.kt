@@ -43,6 +43,22 @@ class SimpleRegistry<T : Any>(val name: String) {
         return value
     }
 
+    /**
+     * Removes the entry registered under [rid] (and its tag-index / reverse-lookup references), if
+     * present. Intended for the registration/startup phase — e.g. a KubeJS script disabling a
+     * built-in generator before the registry freezes.
+     *
+     * @throws IllegalStateException if the registry is already frozen.
+     * @return the removed value, or `null` if [rid] was not registered.
+     */
+    fun unregister(rid: ResourceLocation): T? = synchronized(lock) {
+        check(!frozen) { "Registry '$name' is frozen; cannot unregister: $rid" }
+        val removed = entries.remove(rid) ?: return@synchronized null
+        idByValue.remove(removed)
+        for (ids in tagIndex.values) ids.remove(rid)
+        removed
+    }
+
     fun get(rid: ResourceLocation): T? = synchronized(lock) { entries[rid] }
 
     fun idOf(value: T): ResourceLocation? = synchronized(lock) { idByValue[value] }

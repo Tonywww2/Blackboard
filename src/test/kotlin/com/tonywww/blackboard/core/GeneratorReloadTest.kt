@@ -68,4 +68,23 @@ class GeneratorReloadTest {
         assertEquals(setOf(id("dup"), id("ok")), reg.ids().toSet())
         assertSame(base, reg.get(id("dup")), "基线保留、不被同 id 的可重载项覆盖")
     }
+
+    @Test
+    fun `disabled ids are skipped from both baseline and contributed`() {
+        val reg = SimpleRegistry<QuestionGenerator>("test")
+        val baseKeep = gen("keep")
+        val baseDrop = gen("drop_base") // 基线中被禁用
+        val extDrop = gen("drop_ext")   // 可重载层中被禁用
+        val extKeep = gen("ext_keep")
+
+        val added = GeneratorReload.rebuildInto(
+            reg,
+            baseline = listOf(baseKeep, baseDrop),
+            contributed = listOf(extDrop, extKeep),
+            disabled = setOf(id("drop_base"), id("drop_ext")),
+        )
+        assertEquals(1, added, "仅 ext_keep 被追加（drop_ext 被禁用）")
+        assertEquals(setOf(id("keep"), id("ext_keep")), reg.ids().toSet())
+        assertFalse(reg.contains(id("drop_base")), "被禁用的基线生成器应被跳过")
+    }
 }

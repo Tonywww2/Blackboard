@@ -1,7 +1,9 @@
 package com.tonywww.blackboard.content
 
+import com.tonywww.blackboard.core.BlackboardManager
 import net.minecraft.core.BlockPos
 import net.minecraft.core.Direction
+import net.minecraft.server.level.ServerPlayer
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.context.BlockPlaceContext
@@ -55,7 +57,9 @@ class BlackboardBlock(properties: BlockBehaviour.Properties) : BaseEntityBlock(p
     ) {
         super.setPlacedBy(level, pos, state, placer, stack)
         if (!level.isClientSide) {
-            (level.getBlockEntity(pos) as? BlackboardBlockEntity)?.assignBoardIdIfAbsent(level.random)
+            val be = level.getBlockEntity(pos) as? BlackboardBlockEntity ?: return
+            // 分配 boardId + 默认黑板类型、登记索引、并出第一题（见 BlackboardManager.onPlaced）。
+            BlackboardManager.onPlaced(be, placer as? ServerPlayer)
         }
     }
 

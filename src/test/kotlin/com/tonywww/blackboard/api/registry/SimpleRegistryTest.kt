@@ -69,4 +69,32 @@ class SimpleRegistryTest {
         val reg = SimpleRegistry<String>("t")
         assertNull(reg.idOf("missing"))
     }
+
+    @Test
+    fun `unregister removes entry, tag index, and reverse lookup`() {
+        val reg = SimpleRegistry<String>("t")
+        reg.register(id("a"), "A", setOf(id("math")))
+        reg.register(id("b"), "B", setOf(id("math")))
+        assertEquals("A", reg.unregister(id("a")))
+        assertFalse(reg.contains(id("a")))
+        assertNull(reg.idOf("A"))
+        assertEquals(listOf("B"), reg.byTag(id("math")), "标签索引应移除已注销项")
+        assertEquals(listOf("B"), reg.all())
+    }
+
+    @Test
+    fun `unregister unknown id returns null`() {
+        val reg = SimpleRegistry<String>("t")
+        assertNull(reg.unregister(id("nope")))
+    }
+
+    @Test
+    fun `unregister after freeze throws`() {
+        val reg = SimpleRegistry<String>("t")
+        reg.register(id("a"), "A")
+        reg.freeze()
+        assertThrows(IllegalStateException::class.java) {
+            reg.unregister(id("a"))
+        }
+    }
 }
