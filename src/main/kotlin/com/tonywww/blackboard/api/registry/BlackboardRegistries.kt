@@ -10,7 +10,10 @@ import com.tonywww.blackboard.api.question.QuestionGenerator
  * 方块实体仅持久化 `generatorId` + `Question.data`，不绑定具体 lambda（见 internal-core-api §2/§10）。
  */
 object BlackboardRegistries {
+    @JvmField
     val QUESTION_GENERATORS = SimpleRegistry<QuestionGenerator>("question_generator")
+
+    @JvmField
     val BLACKBOARD_TYPES = SimpleRegistry<BlackboardType>("blackboard_type")
 
     /** 注册阶段结束后冻结所有注册表，拒绝后续修改。 */

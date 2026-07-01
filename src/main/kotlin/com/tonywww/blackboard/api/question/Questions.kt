@@ -12,6 +12,7 @@ import net.minecraft.resources.ResourceLocation
  * 详见 internal-core-api §4.1 修订说明。
  */
 object Questions {
+    @JvmStatic
     fun builder(id: ResourceLocation): QuestionBuilder = QuestionBuilder(id)
 }
 

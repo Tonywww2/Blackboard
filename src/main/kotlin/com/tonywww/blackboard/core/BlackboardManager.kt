@@ -6,7 +6,9 @@ import com.tonywww.blackboard.api.event.QuestionGeneratedEvent
 import com.tonywww.blackboard.api.question.Question
 import com.tonywww.blackboard.api.registry.BlackboardRegistries
 import com.tonywww.blackboard.content.BlackboardBlockEntity
+import com.tonywww.blackboard.content.BlackboardBoards
 import net.minecraft.core.BlockPos
+import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.resources.ResourceKey
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.server.level.ServerPlayer
@@ -62,6 +64,10 @@ object BlackboardManager {
         val question = try {
             val selCtx = SelectionContextImpl(type, level, pos, state, player)
             val generator = selectGenerator(type, selCtx)
+            if (generator == null) {
+                logger.warn("黑板 {} 无可用题目生成器（选题池为空），暂不出题", type.id)
+                return null
+            }
             // §13(4): 难度来源未定，暂用 0。
             val genCtx = GenerationContextImpl(level, pos, state, type, level.random, player, 0)
             generator.generate(genCtx)
@@ -75,13 +81,17 @@ object BlackboardManager {
     }
 
     /**
-     * 放置黑板时的接线（服务端）：分配 boardId 与默认黑板类型（若尚无）、登记索引、并出第一题。
-     * 由方块的 `setPlacedBy` 调用；[BlackboardApi.DEFAULT_TYPE_ID] 未注册时不出题（优雅降级）。
+     * 放置黑板时的接线（服务端）：分配 boardId、按方块 id 绑定的黑板类型（见 [BlackboardBoards]，
+     * 未绑定回退 [BlackboardApi.DEFAULT_TYPE_ID]）、登记索引、并出第一题。由方块的 `setPlacedBy` 调用；
+     * 类型未注册或题库为空时不出题（优雅降级，不崩溃）。
      */
     fun onPlaced(be: BlackboardBlockEntity, player: ServerPlayer? = null) {
         val level = be.level as? ServerLevel ?: return
         be.assignBoardIdIfAbsent(level.random)
-        if (be.blackboardTypeId == null) be.setBlackboardType(BlackboardApi.DEFAULT_TYPE_ID)
+        if (be.blackboardTypeId == null) {
+            val blockId = BuiltInRegistries.BLOCK.getKey(be.blockState.block)
+            be.setBlackboardType(BlackboardBoards.typeFor(blockId) ?: BlackboardApi.DEFAULT_TYPE_ID)
+        }
         track(level, be)
         generateQuestion(be, player)
     }

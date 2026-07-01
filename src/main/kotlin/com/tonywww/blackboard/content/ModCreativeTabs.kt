@@ -31,7 +31,7 @@ object ModCreativeTabs {
             .title(Component.translatable("itemGroup.${Blackboard.MOD_ID}"))
             .icon { ItemStack(ModItems.BLACKBOARD.get()) }
             .displayItems { _, output ->
-                output.accept(ModItems.BLACKBOARD.get())
+                BlackboardBoards.tabItems().forEach { output.accept(it.get()) }
             }
             .build()
     })

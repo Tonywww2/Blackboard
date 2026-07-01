@@ -68,6 +68,7 @@ class BlackboardType private constructor(
     }
 
     companion object {
+        @JvmStatic
         fun builder(id: ResourceLocation) = Builder(id)
     }
 }

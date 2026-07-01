@@ -12,6 +12,7 @@ import com.tonywww.blackboard.api.registry.register
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.util.RandomSource
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -93,5 +94,12 @@ class SelectionTest {
         reg.register(y)
         val type = typeWith(GeneratorPool.All) { c, _ -> c.last().generator }
         assertSame(y, selectGenerator(type, selCtx(), reg)) // last in registration order
+    }
+
+    @Test
+    fun `empty pool returns null instead of throwing`() {
+        val reg = SimpleRegistry<QuestionGenerator>("test") // 空注册表 = 用户移除了全部生成器
+        val type = typeWith(GeneratorPool.All) { c, _ -> c.first().generator }
+        assertNull(selectGenerator(type, selCtx(), reg))
     }
 }

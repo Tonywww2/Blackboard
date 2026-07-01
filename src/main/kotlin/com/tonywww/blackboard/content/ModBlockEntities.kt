@@ -15,7 +15,8 @@ object ModBlockEntities {
     private val REGISTER = PlatformRegistration.blockEntities()
 
     val BLACKBOARD: Supplier<BlockEntityType<BlackboardBlockEntity>> = REGISTER.register(Blackboard.MOD_ID, Supplier<BlockEntityType<BlackboardBlockEntity>> {
-        BlockEntityType.Builder.of(::BlackboardBlockEntity, ModBlocks.BLACKBOARD.get()).build(null)
+        // 有效方块集 = 基础黑板 + 通过 BlackboardBoards 注册的扩展黑板方块。
+        BlockEntityType.Builder.of(::BlackboardBlockEntity, *BlackboardBoards.validBlocks()).build(null)
     })
 
     fun register(bus: IEventBus) {

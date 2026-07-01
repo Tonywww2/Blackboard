@@ -14,7 +14,7 @@ import java.util.function.Supplier
 
 /** Block registry for Blackboard. Call [register] with the mod event bus during construction. */
 object ModBlocks {
-    private val REGISTER = PlatformRegistration.blocks()
+    internal val REGISTER = PlatformRegistration.blocks()
 
     val BLACKBOARD: Supplier<Block> = REGISTER.register(Blackboard.MOD_ID, Supplier<Block> { BlackboardBlock(blockProps()) })
 

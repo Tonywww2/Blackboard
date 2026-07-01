@@ -14,8 +14,14 @@ sealed interface AnswerResult {
     data class Invalid(val feedback: Component? = null) : AnswerResult
 
     companion object {
+        @JvmStatic
+        @JvmOverloads
         fun correct(score: Double = 1.0) = Correct(score)
+
+        @JvmStatic
         fun incorrect() = Incorrect()
+
+        @JvmStatic
         fun invalid() = Invalid()
     }
 }
