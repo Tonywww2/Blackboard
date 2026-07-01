@@ -64,5 +64,21 @@ class SimpleRegistry<T : Any>(val name: String) {
         synchronized(lock) { frozen = true }
     }
 
+    /**
+     * Reopens a frozen registry for a rebuild: clears all entries/tags and unfreezes.
+     *
+     * Used by the runtime hot-reload pipeline (`core.GeneratorReload`) to rebuild the generator
+     * registry via the `/blackboard reload` command. The coordinator runs this on the server thread
+     * while the registry is briefly empty, then re-registers and [freeze]s again.
+     */
+    fun reopen() {
+        synchronized(lock) {
+            entries.clear()
+            tagIndex.clear()
+            idByValue.clear()
+            frozen = false
+        }
+    }
+
     fun isFrozen(): Boolean = frozen
 }

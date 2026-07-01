@@ -3,9 +3,13 @@ package com.tonywww.blackboard.platform
 import com.tonywww.blackboard.chat.ChatHandler
 import com.tonywww.blackboard.content.BlackboardBlockEntity
 import com.tonywww.blackboard.core.BlackboardManager
+import com.tonywww.blackboard.core.GeneratorReload
+import net.minecraft.commands.Commands
+import net.minecraft.network.chat.Component
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.world.level.chunk.LevelChunk
 //? if forge {
+import net.minecraftforge.event.RegisterCommandsEvent
 import net.minecraftforge.event.ServerChatEvent
 import net.minecraftforge.event.level.ChunkEvent
 import net.minecraftforge.event.server.ServerAboutToStartEvent
@@ -15,6 +19,7 @@ import net.minecraftforge.fml.common.Mod.EventBusSubscriber
 //?} else {
 /*import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
+import net.neoforged.neoforge.event.RegisterCommandsEvent
 import net.neoforged.neoforge.event.ServerChatEvent
 import net.neoforged.neoforge.event.level.ChunkEvent
 import net.neoforged.neoforge.event.server.ServerAboutToStartEvent
@@ -39,16 +44,34 @@ object PlatformEvents {
         ChatHandler.handle(event.player, event.rawText)
     }
 
-    /** 服务器即将启动：注册阶段（含 KubeJS startup）已结束，冻结注册表（internal-core-api §10）。 */
+    /** 服务器即将启动：注册阶段（含 KubeJS startup）已结束——快照启动基线、触发可重载层、冻结注册表（internal-core-api §10）。 */
     @SubscribeEvent
     fun onServerAboutToStart(event: ServerAboutToStartEvent) {
-        BlackboardManager.freezeRegistries()
+        GeneratorReload.initialLoad(event.server)
     }
 
     /** 服务器停止：清空黑板索引。 */
     @SubscribeEvent
     fun onServerStopping(event: ServerStoppingEvent) {
         BlackboardManager.clearAll()
+    }
+
+    /** 注册指令：`/blackboard reload` 热重载题目生成器（权限等级 2）。 */
+    @SubscribeEvent
+    fun onRegisterCommands(event: RegisterCommandsEvent) {
+        event.dispatcher.register(
+            Commands.literal("blackboard").requires { it.hasPermission(2) }
+                .then(
+                    Commands.literal("reload").executes { ctx ->
+                        val count = GeneratorReload.reload(ctx.source.server)
+                        ctx.source.sendSuccess(
+                            { Component.literal("Blackboard: reloaded question generators ($count total)") },
+                            true,
+                        )
+                        count
+                    },
+                ),
+        )
     }
 
     /** 区块加载：登记其中的黑板，供 boardId 定位（P5-A 委托 P7-A 接线）。 */

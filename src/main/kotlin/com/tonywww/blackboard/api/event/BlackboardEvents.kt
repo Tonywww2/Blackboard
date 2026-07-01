@@ -7,6 +7,13 @@ package com.tonywww.blackboard.api.event
  * [AnswerEvent]/[RewardEvent] 额外携带 `player`。
  */
 object BlackboardEvents {
+    /**
+     * 注册阶段 / 热重载广播：贡献可重载的 [com.tonywww.blackboard.api.question.QuestionGenerator]。
+     * 想支持 `/blackboard reload` 热重载的扩展方应监听此事件（而非在 init 直接写注册表）。
+     * 见 [RegisterGeneratorsEvent] 与 `core.GeneratorReload`。
+     */
+    val REGISTER_GENERATORS = EventHook<RegisterGeneratorsEvent>("register_generators")
+
     /** 出题前广播：可增删候选/改权重，或强制指定生成器。 */
     val SELECT_GENERATOR = EventHook<SelectGeneratorEvent>("select_generator")
 

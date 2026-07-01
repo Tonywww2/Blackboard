@@ -66,10 +66,13 @@ class BuiltinGeneratorsTest {
     fun `generators are tagged and registrable`() {
         assertTrue(BuiltinGenerators.ADDITION.tags.contains(BlackboardTags.MATH))
         assertTrue(BuiltinGenerators.TRUE_FALSE_SUM.tags.contains(BlackboardTags.TEXT))
+        // 每个内置生成器都带 DEFAULT，默认黑板（ByTag(DEFAULT)）才能选到题。
+        assertTrue(BuiltinGenerators.ALL.all { it.tags.contains(BlackboardTags.DEFAULT) })
 
         val reg = SimpleRegistry<QuestionGenerator>("test")
         BuiltinGenerators.ALL.forEach { reg.register(it) }
         assertEquals(BuiltinGenerators.ALL.size, reg.all().size)
+        assertEquals(BuiltinGenerators.ALL.size, reg.byTag(BlackboardTags.DEFAULT).size)
         assertSame(BuiltinGenerators.ADDITION, reg.get(BuiltinGenerators.ADDITION.id))
     }
 }

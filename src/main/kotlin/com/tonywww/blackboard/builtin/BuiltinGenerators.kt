@@ -12,7 +12,8 @@ import net.minecraft.resources.ResourceLocation
 import net.minecraft.util.RandomSource
 
 /**
- * 内置题目生成器：加/减/乘/除/平方（`#blackboard:math`）与一个简单是非题（`#blackboard:text`）。
+ * 内置题目生成器：加/减/乘/除/平方（`#blackboard:math`）与一个简单是非题（`#blackboard:text`）；
+ * 均含 `#blackboard:default`，供默认黑板（`DEFAULT_TYPE` 的 `ByTag(DEFAULT)`）选题。
  * 判题复用 P1-D 的 [Validators]。在模组初始化阶段（注册表冻结前）调用 [register]。
  */
 object BuiltinGenerators {
@@ -49,7 +50,7 @@ object BuiltinGenerators {
     val TRUE_FALSE_SUM: QuestionGenerator = run {
         val genId = id("true_false_sum")
         QuestionGenerator.builder(genId)
-            .tag(BlackboardTags.TEXT)
+            .tag(BlackboardTags.TEXT, BlackboardTags.DEFAULT)
             .weight(5)
             .generate { ctx ->
                 val r = ctx.random
@@ -84,7 +85,7 @@ object BuiltinGenerators {
         make: (RandomSource) -> Pair<String, Int>,
     ): QuestionGenerator =
         QuestionGenerator.builder(genId)
-            .tag(BlackboardTags.MATH)
+            .tag(BlackboardTags.MATH, BlackboardTags.DEFAULT)
             .weight(weight)
             .generate { ctx ->
                 val (text, answer) = make(ctx.random)

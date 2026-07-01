@@ -8,6 +8,7 @@ plugins {
 val loader: ModPlatform = loom.platform.get()
 val loaderName: String = property("loom.platform").toString()
 val mcVersion: String = property("vers.mcVersion").toString()
+val modId: String = property("mod.id").toString()
 val javaVersion: Int = if (stonecutter.eval(mcVersion, ">=1.20.6")) 21 else 17
 
 group = property("mod.group").toString()
@@ -20,6 +21,14 @@ loom {
         // Only generate IDE run configs for the active Stonecutter version.
         ideConfigGenerated(stonecutter.current.isActive)
         runDir("../../run")
+    }
+    // Datagen run (`runData`): drives com.tonywww.blackboard.data.BlackboardDataGen.
+    // Forge/NeoForge only fire GatherDataEvent for mods named via --mod, so pass ours explicitly.
+    // NB: `modId` is hoisted to a top-level val — inside this block `property(...)` would resolve
+    // to RunConfigSettings, not Project.
+    runConfigs.create("data") {
+        data()
+        programArgs("--all", "--mod", modId)
     }
 }
 
