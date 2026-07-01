@@ -39,5 +39,13 @@ object BlackboardApi {
         /** 微积分题（导数/积分/极限等），归入 `#blackboard:calculus` 池。 */
         @JvmField
         val CALCULUS: ResourceLocation = id("calculus")
+
+        /** 逻辑值运算题，归入 `#blackboard:logic` 池。 */
+        @JvmField
+        val LOGIC: ResourceLocation = id("logic")
+
+        /** 线性代数题（点积/转置/矩阵-向量积/逆矩阵等），归入 `#blackboard:linear_algebra` 池。 */
+        @JvmField
+        val LINEAR_ALGEBRA: ResourceLocation = id("linear_algebra")
     }
 }

@@ -50,6 +50,27 @@ object BlackboardConfig {
         .comment("Whether calculus question generators are also added to the default blackboard pool, so ordinary blackboards can show calculus questions. Applied on server start / /blackboard reload.")
         .define("pool.calculusInDefaultPool", false)
 
+    /**
+     * Whether the boolean-logic question generators (`logic_eval`, `logic_assign`) are also added to the
+     * default blackboard pool (`#blackboard:default`), so ordinary blackboards can show logic questions.
+     * Off by default (logic stays on its own `blackboard:logic` type). Applied on server start and
+     * `/blackboard reload`. Config key `pool.logicInDefaultPool`.
+     */
+    val logicInDefaultPool: ForgeConfigSpec.BooleanValue = builder
+        .comment("Whether boolean-logic question generators are also added to the default blackboard pool, so ordinary blackboards can show logic questions. Applied on server start / /blackboard reload.")
+        .define("pool.logicInDefaultPool", false)
+
+    /**
+     * Whether the linear-algebra question generators (dot product, transpose, matrix-vector product,
+     * inverse) are also added to the default blackboard pool (`#blackboard:default`), so ordinary
+     * blackboards can show linear-algebra questions. Off by default (they stay on the
+     * `blackboard:linear_algebra` type). Applied on server start and `/blackboard reload`. Config key
+     * `pool.linearAlgebraInDefaultPool`.
+     */
+    val linearAlgebraInDefaultPool: ForgeConfigSpec.BooleanValue = builder
+        .comment("Whether the linear-algebra question generators (dot product, transpose, matrix-vector product, inverse) are also added to the default blackboard pool, so ordinary blackboards can show linear-algebra questions. Applied on server start / /blackboard reload.")
+        .define("pool.linearAlgebraInDefaultPool", false)
+
     /** The built config spec, registered by [register]. */
     val SPEC: ForgeConfigSpec = builder.build()
 

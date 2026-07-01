@@ -35,6 +35,17 @@ object Validators {
         if (pattern.matches(a.text.trim())) AnswerResult.correct() else AnswerResult.incorrect()
     }
 
+    /** 逻辑值题：宽松解析 true/false（含 `T/F`、`1/0`、`yes/no`、`对/错` 等）后比较；无法识别→Invalid。 */
+    fun boolean(expectedKey: String = "answer"): (Question, AnswerContext) -> AnswerResult = { q, a ->
+        val exp = parseBoolean(q.getString(expectedKey))
+        val got = parseBoolean(a.text)
+        when {
+            got == null -> AnswerResult.invalid()
+            exp == got -> AnswerResult.correct()
+            else -> AnswerResult.incorrect()
+        }
+    }
+
     /** 数值题：字面数值解析 + 容差比较。 */
     fun number(
         expectedKey: String = "answer",
@@ -99,6 +110,13 @@ object Validators {
         val m = Regex("^([+-]?\\d+(?:\\.\\d+)?)\\s*/\\s*([+-]?\\d+(?:\\.\\d+)?)$").find(t) ?: return null
         val d = m.groupValues[2].toDouble()
         return if (d == 0.0) null else m.groupValues[1].toDouble() / d
+    }
+
+    /** 宽松布尔解析：`true/t/1/yes/y/⊤/对/真/是`→true；`false/f/0/no/n/⊥/错/假/否`→false；否则 null。 */
+    fun parseBoolean(s: String): Boolean? = when (s.trim().lowercase()) {
+        "true", "t", "1", "yes", "y", "\u22a4", "对", "真", "是" -> true
+        "false", "f", "0", "no", "n", "\u22a5", "错", "假", "否" -> false
+        else -> null
     }
 
     /** 解析嵌套方括号矩阵 `[[a,b],[c,d]]`；空白忽略；非法返回 null。 */

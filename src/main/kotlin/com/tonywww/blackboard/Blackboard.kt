@@ -13,6 +13,8 @@ import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent
 import com.tonywww.blackboard.builtin.BuiltinBlackboardTypes
 import com.tonywww.blackboard.builtin.BuiltinGenerators
 import com.tonywww.blackboard.builtin.calculus.CalculusGenerators
+import com.tonywww.blackboard.builtin.linalg.LinearAlgebraGenerators
+import com.tonywww.blackboard.builtin.logic.LogicGenerators
 import com.tonywww.blackboard.client.BlackboardClient
 import com.tonywww.blackboard.compat.kubejs.BlackboardKubePlugin
 import com.tonywww.blackboard.content.ModBlockEntities
@@ -74,6 +76,17 @@ object Blackboard {
         // loaded at construction) can be read on server start / /blackboard reload.
         CalculusGenerators.registerReloadable()
         CalculusGenerators.registerType()
+
+        // Linear-algebra module: same reloadable pattern (reads pool.linearAlgebraInDefaultPool on
+        // server start / /blackboard reload). Generators tagged #blackboard:linear_algebra + a
+        // ByTag(LINEAR_ALGEBRA) blackboard type.
+        LinearAlgebraGenerators.registerReloadable()
+        LinearAlgebraGenerators.registerType()
+
+        // Logic module generators + its ByTag(LOGIC) blackboard type (before freeze). Same reloadable
+        // layer as calculus so pool.logicInDefaultPool (config) is read on server start / /blackboard reload.
+        LogicGenerators.registerReloadable()
+        LogicGenerators.registerType()
 
         // Soft dependency: only touch the KubeJS plugin class when KubeJS is loaded, otherwise its
         // KubeJS superclass would NoClassDefFound on a KubeJS-less install (P4-C).
