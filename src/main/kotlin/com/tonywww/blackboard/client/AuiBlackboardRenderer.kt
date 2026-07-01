@@ -16,7 +16,7 @@ import net.minecraft.world.phys.Vec3
  * Shows the board's [RenderContext.boardId] together with the question on an in-world panel in front
  * of the blackboard. The question [net.minecraft.network.chat.Component] is flattened to a string via
  * [net.minecraft.network.chat.Component.getString] and rasterized to a white-on-transparent PNG by
- * [LatexImageRenderer] (pure-Java JLaTeXMath — no KaTeX, no page JS, no KubeJS). The PNG is written
+ * [LatexImageRenderer] (pure-Java JLaTeXMath, no page JS or KubeJS). The PNG is written
  * under the game dir and shown through the template's `<img id="content">`, sized to fit the panel.
  * See docs/references/apricity-ui.md §6.
  *

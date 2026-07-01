@@ -149,19 +149,13 @@ object PlatformEvents {
         return be
     }
 
-    /** 区块加载：登记其中的黑板，供 boardId 定位（P5-A 委托 P7-A 接线）。 */
+    /** 区块加载：登记其中已初始化的黑板，供 boardId 定位（未初始化/世界生成的黑板由 `BlackboardBlockEntity.onLoad` 处理）。 */
     @SubscribeEvent
     fun onChunkLoad(event: ChunkEvent.Load) {
         val level = event.level as? ServerLevel ?: return
         val chunk = event.chunk as? LevelChunk ?: return
         for (be in chunk.blockEntities.values) {
-            if (be !is BlackboardBlockEntity) continue
-            if (be.boardId.isEmpty()) {
-                // 世界生成放置的黑板尚未初始化：回主线程分配 boardId+默认类型并出题（区块加载可能在异步线程）。
-                level.server.execute { if (!be.isRemoved) BlackboardManager.onPlaced(be) }
-            } else {
-                BlackboardManager.track(level, be)
-            }
+            if (be is BlackboardBlockEntity) BlackboardManager.track(level, be)
         }
     }
 

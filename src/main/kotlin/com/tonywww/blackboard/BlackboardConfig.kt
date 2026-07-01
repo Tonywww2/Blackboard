@@ -29,6 +29,16 @@ object BlackboardConfig {
         .comment("Debug: sneak (shift) right-click a blackboard to have it tell you the current question's text component.")
         .define("debug.tellQuestionOnShiftClick", false)
 
+    /**
+     * Base question difficulty (0 = easiest, higher = harder). Each blackboard type may add its own
+     * modifier on top (see [com.tonywww.blackboard.api.board.BlackboardType.difficultyModifier]); the
+     * total is clamped to `0..10` before generation, so a negative sum just means "easiest". Config key
+     * `question.difficultyBase`.
+     */
+    val difficultyBase: ForgeConfigSpec.IntValue = builder
+        .comment("Base question difficulty (0 = easiest, higher = harder). Per-blackboard-type modifiers add to this; the total is clamped to 0..10.")
+        .defineInRange("question.difficultyBase", 0, -8, 8)
+
     /** The built config spec, registered by [register]. */
     val SPEC: ForgeConfigSpec = builder.build()
 

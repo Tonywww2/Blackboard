@@ -1,5 +1,6 @@
 package com.tonywww.blackboard.core
 
+import com.tonywww.blackboard.BlackboardConfig
 import com.tonywww.blackboard.api.BlackboardApi
 import com.tonywww.blackboard.api.event.BlackboardEvents
 import com.tonywww.blackboard.api.event.QuestionGeneratedEvent
@@ -76,8 +77,9 @@ object BlackboardManager {
                 logger.warn("黑板 {} 无可用题目生成器（选题池为空），暂不出题", type.id)
                 return null
             }
-            // §13(4): 难度来源未定，暂用 0。
-            val genCtx = GenerationContextImpl(level, pos, state, type, level.random, player, 0)
+            // 难度 = 全局配置基数 + 该黑板类型的增量，夹到 0..10（负数按最简单处理）。
+            val difficulty = (BlackboardConfig.difficultyBase.get() + type.difficultyModifier).coerceIn(0, 10)
+            val genCtx = GenerationContextImpl(level, pos, state, type, level.random, player, difficulty)
             generator.generate(genCtx)
         } catch (e: Throwable) {
             logger.error("出题失败 board=${be.boardId} type=${type.id}", e)

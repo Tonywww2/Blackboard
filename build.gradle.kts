@@ -93,11 +93,11 @@ dependencies {
     if (loader == ModPlatform.FORGE) {
         modCompileOnly("dev.latvian.mods:kubejs-forge:${property("deps.kubejs")}") { excludeAnimatedGifLib() }
         modCompileOnly("dev.latvian.mods:rhino-forge:${property("deps.rhino")}")
-        // Dev-only: AUI's page-JS engine (ApricityJS.eval) bails out unless KubeJS is a loaded mod, so
-        // load KubeJS + its Architectury/Rhino transitives into runClient to exercise the KaTeX LaTeX
-        // path (P8-A). NOT published — players who want LaTeX install AUI + KubeJS themselves. MixinExtras
-        // is already bundled by Forge (exclude to avoid a duplicate service module); animated-gif-lib
-        // lives only on JitPack (excluded — KubeJS only needs it for gif assets we never load).
+        // Dev-only: load KubeJS + its Architectury/Rhino transitives into runClient so the mod's
+        // KubeJS-compat integration (compat/kubejs) is exercised in dev. NOT published — a soft
+        // dependency (players who want it install KubeJS themselves). MixinExtras is already bundled by
+        // Forge (exclude to avoid a duplicate service module); animated-gif-lib lives only on JitPack
+        // (excluded — KubeJS only needs it for gif assets we never load).
         modLocalRuntime("dev.latvian.mods:kubejs-forge:${property("deps.kubejs")}") {
             excludeAnimatedGifLib()
             exclude(group = "io.github.llamalad7")
@@ -127,7 +127,7 @@ dependencies {
 
     // JLaTeXMath — pure-Java LaTeX renderer (org.scilab.forge). The renderer rasterizes each question
     // to a white-on-transparent PNG on the JVM side and hands it to AUI as an <img>, so math renders
-    // without KaTeX / page JS / KubeJS.
+    // without any page JS or KubeJS.
     //   - `implementation`        → compile classpath (mod code references TeXFormula/TeXIcon).
     //   - `forgeRuntimeLibrary`   → dev runClient classpath. Forge/NeoForge ModLauncher does NOT load
     //                               plain `implementation` libraries into the mod's transforming

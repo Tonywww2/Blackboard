@@ -15,7 +15,7 @@ import javax.imageio.ImageIO
 
 /**
  * Rasterizes a blackboard question (LaTeX, or plain arithmetic like `88 ÷ 6 = ?`) to a
- * white-on-transparent PNG with **JLaTeXMath** (pure-Java LaTeX — no KaTeX, no page JS, no KubeJS) and
+ * white-on-transparent PNG with **JLaTeXMath** (pure-Java LaTeX, no page JS or KubeJS) and
  * writes it under `<gamedir>/apricity/blackboard/gen/<hash>.png`, where AUI's `<img>` loader
  * ([com.sighs.apricityui.instance.Loader]/`ClientLoader.getResourceStream`) can pick it up.
  *

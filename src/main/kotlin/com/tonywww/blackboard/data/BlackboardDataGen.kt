@@ -21,8 +21,10 @@ import net.neoforged.neoforge.data.event.GatherDataEvent
 /**
  * 数据生成（datagen）：由 `runData` 触发；KLF `@EventBusSubscriber` 自动挂到 mod 总线。
  *
- * 目前生成 `#blackboard:blackboards` 方块标签（聚合本模组黑板方块——其它 mod 的黑板方块也可加入此标签，
- * 便于"数据驱动地识别黑板"）。
+ * 目前生成：
+ * - `#blackboard:blackboards` 方块标签（聚合本模组黑板方块——其它 mod 的黑板方块也可加入此标签，
+ *   便于"数据驱动地识别黑板"）；
+ * - `#blackboard:has_blackboard` 群系标签（世界生成放置黑板的允许群系白名单，默认 = 全体主世界群系）。
  *
  * 说明：[com.tonywww.blackboard.api.question.QuestionGenerator] 的分类标签（`math`/`text`/`default`）属
  * **模组内部注册表**（`SimpleRegistry` 的标签索引），不是 MC 数据标签，故仍在代码里用 `.tag(...)` 设置，
@@ -36,6 +38,10 @@ object BlackboardDataGen {
         event.generator.addProvider(
             event.includeServer(),
             DataProvider.Factory { output -> BlackboardBlockTagProvider(output) },
+        )
+        event.generator.addProvider(
+            event.includeServer(),
+            DataProvider.Factory { output -> BlackboardBiomeTagProvider(output) },
         )
     }
 }
@@ -69,4 +75,27 @@ private class BlackboardBlockTagProvider(private val output: PackOutput) : DataP
         /*const val TAG_FOLDER = "tags/block"
         *///?}
     }
+}
+
+/**
+ * 生成群系白名单标签 `#blackboard:has_blackboard`——世界生成放置黑板的**允许群系**（默认 = 全体主世界群系，
+ * 可被数据包覆盖以增删允许群系）。群系标签目录 `tags/worldgen/biome` 两版一致（不受 1.21 blocks→block
+ * 目录改名影响），故无需 Stonecutter 分支。
+ */
+private class BlackboardBiomeTagProvider(private val output: PackOutput) : DataProvider {
+
+    override fun run(cache: CachedOutput): CompletableFuture<*> {
+        val json = JsonObject().apply {
+            addProperty("replace", false)
+            add("values", JsonArray().apply { add("#minecraft:is_forest") })
+        }
+        val bytes = json.toString().toByteArray(Charsets.UTF_8)
+        val path = output.getOutputFolder(PackOutput.Target.DATA_PACK)
+            .resolve("${BlackboardApi.MOD_ID}/tags/worldgen/biome/has_blackboard.json")
+        return CompletableFuture.runAsync {
+            cache.writeIfNeeded(path, bytes, Hashing.sha256().hashBytes(bytes))
+        }
+    }
+
+    override fun getName(): String = "Blackboard Biome Tags"
 }

@@ -18,32 +18,37 @@ import net.minecraft.util.RandomSource
  */
 object BuiltinGenerators {
 
-    val ADDITION: QuestionGenerator = mathGen(id("addition"), weight = 10) { r ->
-        val a = r.nextIntBetweenInclusive(1, 99)
-        val b = r.nextIntBetweenInclusive(1, 99)
+    val ADDITION: QuestionGenerator = mathGen(id("addition"), weight = 10) { r, d ->
+        val hi = ceiling(99, 90, d)
+        val a = r.nextIntBetweenInclusive(1, hi)
+        val b = r.nextIntBetweenInclusive(1, hi)
         "$a + $b = ?" to (a + b)
     }
 
-    val SUBTRACTION: QuestionGenerator = mathGen(id("subtraction"), weight = 10) { r ->
-        val a = r.nextIntBetweenInclusive(1, 99)
+    val SUBTRACTION: QuestionGenerator = mathGen(id("subtraction"), weight = 10) { r, d ->
+        val hi = ceiling(99, 90, d)
+        val a = r.nextIntBetweenInclusive(1, hi)
         val b = r.nextIntBetweenInclusive(0, a)
         "$a - $b = ?" to (a - b)
     }
 
-    val MULTIPLICATION: QuestionGenerator = mathGen(id("multiplication"), weight = 8) { r ->
-        val a = r.nextIntBetweenInclusive(2, 12)
-        val b = r.nextIntBetweenInclusive(2, 12)
+    val MULTIPLICATION: QuestionGenerator = mathGen(id("multiplication"), weight = 8) { r, d ->
+        val hi = ceiling(12, 6, d)
+        val a = r.nextIntBetweenInclusive(2, hi)
+        val b = r.nextIntBetweenInclusive(2, hi)
         "$a * $b = ?" to (a * b)
     }
 
-    val DIVISION: QuestionGenerator = mathGen(id("division"), weight = 6) { r ->
-        val b = r.nextIntBetweenInclusive(2, 12)
-        val q = r.nextIntBetweenInclusive(1, 12)
+    val DIVISION: QuestionGenerator = mathGen(id("division"), weight = 6) { r, d ->
+        val hi = ceiling(12, 6, d)
+        val b = r.nextIntBetweenInclusive(2, hi)
+        val q = r.nextIntBetweenInclusive(1, hi)
         "${b * q} / $b = ?" to q
     }
 
-    val SQUARE: QuestionGenerator = mathGen(id("square"), weight = 5) { r ->
-        val a = r.nextIntBetweenInclusive(2, 20)
+    val SQUARE: QuestionGenerator = mathGen(id("square"), weight = 5) { r, d ->
+        val hi = ceiling(20, 12, d)
+        val a = r.nextIntBetweenInclusive(2, hi)
         "$a^2 = ?" to (a * a)
     }
 
@@ -78,17 +83,21 @@ object BuiltinGenerators {
         ALL.forEach { BlackboardRegistries.QUESTION_GENERATORS.register(it) }
     }
 
-    /** 构建一个 MATH 标签、用数值校验器（[Validators.number]）判题的算术生成器。 */
+    /** 按难度放宽操作数上限：难度 0 用 [base]，每升一级 +[perLevel]（难度取非负，兜底负难度）。 */
+    private fun ceiling(base: Int, perLevel: Int, difficulty: Int): Int =
+        base + perLevel * difficulty.coerceAtLeast(0)
+
+    /** 构建一个 MATH 标签、用数值校验器（[Validators.number]）判题的算术生成器（题面随 `difficulty` 放宽）。 */
     private fun mathGen(
         genId: ResourceLocation,
         weight: Int,
-        make: (RandomSource) -> Pair<String, Int>,
+        make: (RandomSource, Int) -> Pair<String, Int>,
     ): QuestionGenerator =
         QuestionGenerator.builder(genId)
             .tag(BlackboardTags.MATH, BlackboardTags.DEFAULT)
             .weight(weight)
             .generate { ctx ->
-                val (text, answer) = make(ctx.random)
+                val (text, answer) = make(ctx.random, ctx.difficulty.coerceAtLeast(0))
                 Questions.builder(genId)
                     .content(Component.literal(text))
                     .prompt(Component.literal(text))

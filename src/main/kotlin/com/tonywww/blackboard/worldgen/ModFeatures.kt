@@ -17,7 +17,10 @@ object ModFeatures {
 
     /** `blackboard:blackboard` 特征（供数据包 `worldgen/configured_feature` 引用）。 */
     val BLACKBOARD: Supplier<Feature<NoneFeatureConfiguration>> =
-        REGISTER.register(Blackboard.MOD_ID) { BlackboardFeature(NoneFeatureConfiguration.CODEC) }
+        REGISTER.register(
+            Blackboard.MOD_ID,
+            Supplier<Feature<NoneFeatureConfiguration>> { BlackboardFeature(NoneFeatureConfiguration.CODEC) },
+        )
 
     fun register(bus: IEventBus) {
         REGISTER.register(bus)

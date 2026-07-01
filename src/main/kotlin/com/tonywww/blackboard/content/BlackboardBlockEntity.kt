@@ -7,6 +7,7 @@ import com.tonywww.blackboard.api.question.Question
 import com.tonywww.blackboard.api.registry.BlackboardRegistries
 import com.tonywww.blackboard.api.render.BlackboardRendering
 import com.tonywww.blackboard.api.render.RenderContext
+import com.tonywww.blackboard.core.BlackboardManager
 import com.tonywww.blackboard.core.questionFromNbt
 import com.tonywww.blackboard.core.toClientNbt
 import com.tonywww.blackboard.core.toNbt
@@ -102,6 +103,27 @@ open class BlackboardBlockEntity(pos: BlockPos, state: BlockState) :
             type.onSolved(RewardContext(serverLevel, blockPos, blockState, player, q, result, type))
         }
         serverLevel.destroyBlock(blockPos, false)
+    }
+
+    /**
+     * BE 真正加载进世界时触发（每块黑板一次）。世界生成放置的黑板**不会**走方块 `setPlacedBy`，
+     * 其 `boardId` 为空——在此补：分配 boardId+默认类型、登记索引、出第一题；已初始化（存档加载）者仅登记索引。
+     * 回服务器主线程执行以保证 `level` 就绪且线程安全。
+     *
+     * 注：不能靠 `ChunkEvent.Load` ——新生成区块的方块实体此时仍是“待提升”的 NBT，尚未进入
+     * `LevelChunk.blockEntities`，遍历会漏掉世界生成的黑板；`onLoad` 是逐方块实体的可靠时机。
+     */
+    override fun onLoad() {
+        super.onLoad()
+        val serverLevel = level as? ServerLevel ?: return
+        serverLevel.server.execute {
+            if (isRemoved) return@execute
+            if (boardId.isEmpty()) {
+                BlackboardManager.onPlaced(this)
+            } else {
+                BlackboardManager.track(serverLevel, this)
+            }
+        }
     }
 
     override fun setRemoved() {

@@ -37,6 +37,12 @@ class BlackboardType private constructor(
 
     /** 每题最大作答次数；<=0 表示不限。 */
     val maxAttempts: Int,
+
+    /**
+     * 相对全局难度基数（[com.tonywww.blackboard.BlackboardConfig.difficultyBase]）的难度增量。
+     * 有效难度 = (基数 + 本增量)，再夹到 `0..10`；默认 0（跟随全局），可为负（本类型更简单）。
+     */
+    val difficultyModifier: Int = 0,
 ) {
     class Builder(private val id: ResourceLocation) {
         private var pool: GeneratorPool? = null
@@ -46,6 +52,7 @@ class BlackboardType private constructor(
         private var rewardLootTable: ResourceLocation? = null
         private var answerFormat: AnswerFormat? = null
         private var maxAttempts: Int = 0
+        private var difficultyModifier: Int = 0
 
         fun pool(p: GeneratorPool) = apply { pool = p }
         fun selector(fn: (List<WeightedGenerator>, SelectionContext) -> QuestionGenerator) = apply { selector = fn }
@@ -54,6 +61,9 @@ class BlackboardType private constructor(
         fun rewardLootTable(table: ResourceLocation?) = apply { rewardLootTable = table }
         fun answerFormat(fmt: AnswerFormat) = apply { answerFormat = fmt }
         fun maxAttempts(n: Int) = apply { maxAttempts = n }
+
+        /** 相对全局难度基数的增量（可正可负，默认 0；见 [BlackboardType.difficultyModifier]）。 */
+        fun difficultyModifier(modifier: Int) = apply { difficultyModifier = modifier }
 
         fun build(): BlackboardType = BlackboardType(
             id,
@@ -64,6 +74,7 @@ class BlackboardType private constructor(
             rewardLootTable,
             requireNotNull(answerFormat) { "answerFormat(...) 未设置: $id" },
             maxAttempts,
+            difficultyModifier,
         )
     }
 
