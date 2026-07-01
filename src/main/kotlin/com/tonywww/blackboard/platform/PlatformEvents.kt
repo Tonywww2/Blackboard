@@ -35,13 +35,19 @@ import net.neoforged.neoforge.event.server.ServerStoppingEvent
 /**
  * 平台（加载器）事件订阅：把服务端事件接到本模组逻辑。C4（[ServerChatEvent]）见 loader-platform-api §6。
  *
- * KLF 自动扫描 [EventBusSubscriber] 标注的类，并按方法参数的事件类型判定其所属总线
- * （kotlinlangforge §3），故这里无需手动注册、也无需区分 mod / game 总线；监听方法不可为 `private`。
- * 仅 import 因加载器而异（用 Stonecutter 隔离），方法体两版共享。
+ * 注册方式因加载器而异：
+ * - Forge：用 KLF 的 [EventBusSubscriber] 自动扫描，按方法参数的事件类型判定所属总线（kotlinlangforge §3）。
+ * - NeoForge：KLF 的 langprovider 位于 PLUGIN 模块层，无法读取 GAME 层的 `NeoForge.EVENT_BUS`
+ *   （其 AutomaticEventSubscriber.getGameBus 会抛 IllegalAccessError），故这里不加注解，改由
+ *   [Blackboard] 在 mod 构造时（GAME 层代码）把本对象手动注册到游戏总线。
+ *
+ * 两版方法体共享；监听方法不可为 `private`。仅 import 因加载器而异（用 Stonecutter 隔离）。
  *
  * 注：冻结时机由本任务（P7-A）统一负责；P7-B 不碰冻结。
  */
+//? if forge {
 @EventBusSubscriber
+//?}
 object PlatformEvents {
 
     /** 服务端聊天 → 作答路由（§13(2)：当前不拦截原聊天，仅旁路解析）。 */

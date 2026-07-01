@@ -47,6 +47,13 @@ object Blackboard {
         // Standard loader config (COMMON → config/blackboard-common.toml).
         BlackboardConfig.register()
 
+        // NeoForge: KLF 的 langprovider 处于 PLUGIN 模块层，无法读取 GAME 层的 NeoForge 事件总线
+        // （其 AutomaticEventSubscriber.getGameBus 会抛 IllegalAccessError），故这里在 GAME 层的 mod
+        // 构造代码里手动把游戏总线订阅者接到 NeoForge 事件总线；Forge 仍由 KLF @EventBusSubscriber 自动扫描。
+        //? if neoforge {
+        /*net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(com.tonywww.blackboard.platform.PlatformEvents)
+        *///?}
+
         // Deferred content onto the KLF mod bus.
         ModBlocks.register(bus)
         ModItems.register(bus)

@@ -208,6 +208,7 @@ public class ModNetworking {
 
 
 - **C4 服务端聊天事件**（作答入口）：候选 `ServerChatEvent`（Forge：`net.minecraftforge.event.ServerChatEvent`；NeoForge：`net.neoforged.neoforge.event.ServerChatEvent`，均在 game/forge 总线）。需确认拦截/取消方式（`setCanceled` / 改写消息）与两版字段差异。
+  > ⚠️ **`ServerChatEvent` 与本项目其它作答/生命周期事件都是游戏总线事件**。在 **NeoForge + Loom dev** 下，用 KLF `@EventBusSubscriber` 自动注册游戏总线订阅会触发跨模块层 `IllegalAccessError`（见 kotlinlangforge.md §3）。本项目把这些订阅集中在 `platform/PlatformEvents`：Forge 保留 `@EventBusSubscriber`（Stonecutter `//? if forge`），NeoForge 去注解、在 `Blackboard.init`（GAME 层）手动 `NeoForge.EVENT_BUS.register(PlatformEvents)`。详见 multiloader-build.md §9.4。
 - **C5 按战利品表发奖**：`LootTable` + `LootParams.Builder`（`LootContextParams.ORIGIN`/`THIS_ENTITY`）→ `getRandomItems(...)`，再 `player.getInventory().add` 或掉落。1.20.1 与 1.21.x 的 `LootParams`/`LootContextParamSet` API 有差异，需各取一例。
 - **C6 `Component` ↔ JSON/NBT**（持久化题面 `content`）：候选 1.20.1 `Component.Serializer.toJson(Component)` / `fromJson(String)`；1.21.x 需要 registries（`Component.Serializer.toJson(Component, HolderLookup.Provider)` 或 `ComponentSerialization.CODEC` + `RegistryOps`）。**与 §3 的 registries-provider 变化一致**，但精确 API 落地验证。
   - 备选实现：题面 `content` 不手动转 JSON，直接随 `getUpdateTag/saveAdditional` 的 `HolderLookup.Provider` 用 `ComponentSerialization.CODEC` 编码进 `CompoundTag`，避免字符串中转。
@@ -222,7 +223,7 @@ public class ModNetworking {
 | `content` 同步到客户端渲染 | §2（`getUpdateTag` + `sendBlockUpdated`），无需自定义包（§4）|
 | NBT 存取 registries 形参 | §3 |
 | `PlatformComponents.serialize/deserialize` | §6 C6（待验证）|
-| 作答聊天入口 | §6 C4（待验证，配合 KLF `@EventBusSubscriber`）|
+| 作答聊天入口 | §6 C4（Forge 用 KLF `@EventBusSubscriber`；NeoForge dev 改手动注册游戏总线，见 kotlinlangforge.md §3）|
 | 发奖 | §6 C5（待验证）|
 
 落地包归属：注册 → `content/`；同步基类 → `content/`；平台差异 import/句柄 → 就地 `//? if forge`/`//? if neoforge`；`PlatformComponents` → `platform/`。
@@ -231,3 +232,4 @@ public class ModNetworking {
 
 ## 修订记录
 - 2026-06-30：依据 FarmersDelight `1.20`（Forge）与 `1.21`（NeoForge）分支的 `ModBlocks`、`ModBlockEntityTypes`、`SyncedBlockEntity`、`ModNetworking` 归档注册/同步/网络差异。C4/C5/C6 标记为 FD 未覆盖、待验证。
+- 2026-07-01：§6 C4 与 §7 映射表补——NeoForge + Loom dev 下游戏总线 `@EventBusSubscriber`（如 `ServerChatEvent`）会触 KLF `getGameBus` 跨模块层 `IllegalAccessError`，改为 `PlatformEvents` 在 `Blackboard.init` 手动注册游戏总线（Forge 仍用注解）。详见 kotlinlangforge.md §3、multiloader-build.md §9.4。

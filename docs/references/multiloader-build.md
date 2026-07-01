@@ -186,11 +186,20 @@ dependencies {
     else
         "neoForge"("net.neoforged:neoforge:${property("vers.deps.fml")}")
 
-    // 语言适配器（运行时必需）。必须排除 Loom 重映射后的 kotlin-stdlib——它保留了
-    // Multi-Release 清单标志却丢了 META-INF/versions/，会让 Forge 1.20.1 的 securejarhandler
-    // 在 dev 运行（runClient）时崩溃（详见 §9.1）。Kotlin 插件已提供正版 stdlib。
+    // 语言适配器（运行时必需）。两个 loader 的 dev 运行各有一处 Kotlin classpath 陷阱：
+    // - Forge 1.20.1：排除 Loom 重映射后的 kotlin-stdlib（保留了 Multi-Release 清单标志却丢了
+    //   META-INF/versions/，崩 securejarhandler，详见 §9.1）；Forge 语言提供者能看到 Kotlin 插件的正版 stdlib。
+    // - NeoForge 1.21.1：KLF 的 langprovider 落在 FML 的 PLUGIN 模块层，读不到 game classpath 上
+    //   重映射的 Kotlin → `Missing language klf`（详见 §9.3）。用 forgeRuntimeLibrary 把
+    //   kotlin-stdlib+reflect 放上 dev 运行期 classpath 供其解析。
     modImplementation("dev.nyon:KotlinLangForge:${property("deps.klf")}") {
-        exclude(group = "org.jetbrains.kotlin", module = "kotlin-stdlib")
+        if (loader == ModPlatform.FORGE) {
+            exclude(group = "org.jetbrains.kotlin", module = "kotlin-stdlib")
+        }
+    }
+    if (loader == ModPlatform.NEOFORGE) {
+        "forgeRuntimeLibrary"("org.jetbrains.kotlin:kotlin-stdlib:${libs.versions.kotlin.get()}")
+        "forgeRuntimeLibrary"("org.jetbrains.kotlin:kotlin-reflect:${libs.versions.kotlin.get()}")
     }
 
     // KubeJS 软依赖：仅编译期，运行期由玩家安装（见 §7）。需排除只在 JitPack 上的 gif 库传递依赖。
@@ -220,7 +229,7 @@ tasks {
 java { withSourcesJar() }
 ```
 
-> KLF 已提供 Kotlin 运行时库（见 [kotlinlangforge.md](kotlinlangforge.md)「内置库」），产物**勿重复打包**。但 Loom 会把 KLF 传递来的 `kotlin-stdlib` 重映射成一份「声明 `Multi-Release: true`、却无 `META-INF/versions/`」的 jar，会让 **Forge 1.20.1 的 dev 运行崩溃**，故上面 `exclude` 掉它（Kotlin 插件已提供正版）。详见 §9.1。
+> KLF 已提供 Kotlin 运行时库（见 [kotlinlangforge.md](kotlinlangforge.md)「内置库」），产物**勿重复打包**。但两个 loader 的 dev 运行对 Kotlin classpath 需求相反：**Forge 1.20.1** 要 `exclude` 掉 Loom 重映射的 `kotlin-stdlib`（声明 `Multi-Release: true` 却无 `META-INF/versions/`，崩 securejarhandler，详见 §9.1）；**NeoForge 1.21.1** 反而要用 `forgeRuntimeLibrary` **补上** kotlin-stdlib+reflect（KLF langprovider 在 PLUGIN 层读不到 game classpath 的 Kotlin，详见 §9.3）。故上面用 `loader ==` 条件区分。
 
 ---
 
@@ -303,7 +312,7 @@ side = "BOTH"
 ## 8. 待验证项（落地时确认并回写）
 
 1. **具体版本号**：`deps.klf`、NeoForge `vers.deps.fml`（21.1.x）、`deps.kubejs`——用实际最新。
-2. ~~**Architectury Loom** 对 Forge 1.20.1 的稳定性~~ ✅ **已验证**：`:1.20.1-forge:runClient` 实测进入单人世界（Loom `1.11.458`、forge 47.4.4、JDK 17.0.16），`[blackboard/]: Blackboard loaded`。期间修掉两个 dev 运行崩溃，见 §9。
+2. ~~**Architectury Loom** 对 Forge 1.20.1 的稳定性~~ ✅ **已验证**：`:1.20.1-forge:runClient` 实测进入单人世界（Loom `1.11.458`、forge 47.4.4、JDK 17.0.16），`[blackboard/]: Blackboard loaded`。**NeoForge 1.21.1 亦已验证**：`:1.21.1-neoforge:runClient` 到标题页无异常（NeoForge 21.1.234、JDK 21）。期间共修掉四个 dev 运行崩溃（Forge 两个见 §9.1-9.2、NeoForge 两个见 §9.3-9.4）。
 3. `base.archivesName` 里的 `loader.id()`：确认 `ModPlatform` 取字符串的正确方法（或改用 `property("loom.platform")`）。
 4. `expand` 对 toml 字面 `$` 的转义，落地时验证 `processResources` 输出正确。
 
@@ -311,26 +320,61 @@ side = "BOTH"
 
 ## 9. dev 运行（runClient）：已验证 + 崩溃根因与修复
 
-> 2026-07-01 实测：`:1.20.1-forge:runClient` 成功进入单人世界（JDK 17.0.16、Loom 1.11.458、forge 47.4.4），日志 `[blackboard/]: Blackboard loaded`、玩家在 (1.5, -60.0, 5.5) 出生。两个 loader 的 `build` 亦绿、26 单测全过。下面记录此前 `runClient` 崩溃的两个根因与修复。
+> 2026-07-01 实测：`:1.20.1-forge:runClient` 成功进入单人世界（JDK 17.0.16、Loom 1.11.458、forge 47.4.4）；`:1.21.1-neoforge:runClient` 到标题页无异常（JDK 21、NeoForge 21.1.234），日志均见 `[blackboard/]: Blackboard loaded`。两个 loader 的 `build`（含单测）亦绿。下面按 loader 记录此前 `runClient` 崩溃的四个根因与修复：**Forge** §9.1-9.2、**NeoForge** §9.3-9.4。
 
-### 9.1 securejarhandler 崩溃：重映射的 kotlin-stdlib 丢了 META-INF/versions/
+### 9.1 Forge：securejarhandler 崩溃——重映射的 kotlin-stdlib 丢了 META-INF/versions/
 - **现象**：`build` 通过但 `runClient` 崩溃——`java.io.UncheckedIOException: cpw.mods.niofs.union.UnionFileSystem$NoSuchFileException: /META-INF/versions`，栈顶 `Jar.<init>(Jar.java:138)`（securejarhandler 2.1.10 的 `ClasspathLocator`）。`build` 不触发该目录联合扫描，故只在 dev 运行暴露。
 - **根因**：元凶 jar = **Loom 重映射后的 kotlin-stdlib**（`kotlin-stdlib-<hash>-2.4.0.jar`，KLF 的传递依赖）。重映射**保留了清单里的 `Multi-Release: true`、却删掉了 `META-INF/versions/`**；securejarhandler 对「声明 MR」的 jar 会 `Files.walk(.../META-INF/versions)`，目录不存在即抛 `NoSuchFileException`。
 - **修复**：在 KLF 的 `modImplementation` 上 `exclude(group = "org.jetbrains.kotlin", module = "kotlin-stdlib")`（见 §5）。Kotlin Gradle 插件已提供带 `META-INF/versions/` 的正版 stdlib；KLF 不打进产物 jar，排除只影响 dev classpath。
 
-### 9.2 klf 被误声明为 mandatory MOD 依赖
+### 9.2 两端：klf 被误声明为 mandatory MOD 依赖
 - **现象**（被 9.1 掩盖，修完才暴露）：`Missing or unsupported mandatory dependencies: Mod ID 'klf', Requested by 'blackboard', Expected '[1,)', Actual '[MISSING]'`，无法进游戏。
 - **根因**：**KLF 只注册为 LANGPROVIDER**（日志 `FML Language Providers: klf@2.12.1`），从不作为 MOD 出现。而 `mods.toml` 误加了 `modId = "klf"` 的 mandatory `[[dependencies]]` 块。
 - **修复**：删除两个元数据文件里对 `klf` 的 `[[dependencies]]` 块（见 §6 警告）。`modLoader = "klf"` + `loaderVersion = "[1,)"` 已强制要求 klf 语言提供者。
 
-### 9.3 已否证的假说
+### 9.3 NeoForge：kotlin.Pair 找不到 / Missing language klf
+- **现象**：NeoForge `runClient` 加载到语言提供者阶段崩溃——`Missing language klf`（其内部为 `NoClassDefFoundError: kotlin/Pair`）；`build` 不暴露。
+- **根因**：NeoForge 的 FML 模块层为 **BOOT → PLUGIN → GAME**。KLF 清单 `FMLModType: LIBRARY` 使其 langprovider（`KotlinLanguageLoader`）落在**隔离的 PLUGIN/service 模块层**，而 Loom userdev 把重映射后的 Kotlin 放在 **GAME classpath**——PLUGIN 层读不到（Java 模块系统不允许祖先层读后代层）。生产环境 NeoForge 会把 KLF 经 Jar-in-Jar 内嵌的 kotlin-stdlib 解到该层，但 Loom 的 userdev 定位器**不处理 KLF 的 JiJ**，故 langprovider 无法解析 `kotlin.Pair`。
+- **修复**：对 **NeoForge only** 用 `forgeRuntimeLibrary` 把 kotlin-stdlib + kotlin-reflect 放到 dev 运行期 classpath（作为 KLF 自动模块可读的自动模块），langprovider 即可实例化（见 §5）：
+  ```kotlin
+  if (loader == ModPlatform.NEOFORGE) {
+      "forgeRuntimeLibrary"("org.jetbrains.kotlin:kotlin-stdlib:${libs.versions.kotlin.get()}")
+      "forgeRuntimeLibrary"("org.jetbrains.kotlin:kotlin-reflect:${libs.versions.kotlin.get()}")
+  }
+  ```
+  仅 dev；生产不受影响（KLF 靠 JiJ 自带）。KLF 官方作者用 ModDevGradle，它会自动做等价处理，故无公开的 Loom+KLF+NeoForge 先例。
+
+### 9.4 NeoForge：IllegalAccessError（klf 读不到 neoforge）——getGameBus 跨层
+- **现象**（修完 §9.3 才暴露）：langprovider 加载后、mod 构造期崩溃——`IllegalAccessError: class dev.nyon.klf.mv.ExtensionsKt (in module klf) cannot access class net.neoforged.neoforge.common.NeoForge (in module neoforge) because module klf does not read module neoforge`。
+- **根因**：KLF 的 `AutomaticEventSubscriber.processClass` 对**游戏总线**的 `@SubscribeEvent` 会调 `ExtensionsKt.getGameBus()`（返回 `NeoForge.EVENT_BUS`——GAME 层类）。但 KLF 在 PLUGIN 层，读不到 GAME 层的 `neoforge` 模块 → 抛错。反编译确认：`inject` 只处理带 `@EventBusSubscriber` 的类；`processClass` **仅当**遇到非 `IModBusEvent`（游戏总线）的 `@SubscribeEvent` 才调 getGameBus；mod 总线事件走 `getModBus`（安全——`BlackboardDataGen` 的 `GatherDataEvent` 属此类，不崩）。
+- **已否证的死路**：
+  - 把 KLF 清单改 `GAMELIBRARY`（落 GAME 层）→ getGameBus 能跑，但 langprovider 发现走 `ServiceLoaderUtil.loadServices(IModLanguageLoader)` **只覆盖 PLUGIN 层** → 回到 `Missing language klf`（已用改过清单的 jar 实测）。
+  - 把 `neoforge` 加进 `forgeRuntimeLibrary` → `NeoForge.EVENT_BUS` 类身份重复（两个总线）→ 订阅静默失效，不可取。
+- **修复（保留 KLF，Forge 零改动）**：本模组只有 `PlatformEvents`（全游戏总线）会触发 getGameBus。用 Stonecutter 让其 `@EventBusSubscriber` **仅 Forge 保留**，NeoForge 去掉注解、改在 GAME 层的 mod 构造代码（`Blackboard.init`）手动注册到游戏总线：
+  ```kotlin
+  // PlatformEvents.kt
+  //? if forge {
+  @EventBusSubscriber
+  //?}
+  object PlatformEvents { /* ... */ }
+
+  // Blackboard.kt（init 内）
+  //? if neoforge {
+  /*net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(com.tonywww.blackboard.platform.PlatformEvents)
+  *///?}
+  ```
+  KLF 的 AutomaticEventSubscriber 在 NeoForge 上便找不到该类、不再调 getGameBus。datagen 的 mod 总线 `@EventBusSubscriber` 两端保留不变。Forge 分支为功能等价 no-op（注解仍在、neoforge 块注释掉），不回归。详见 [kotlinlangforge.md](kotlinlangforge.md) §3、[loader-platform-api.md](loader-platform-api.md) §6 C4。
+
+### 9.5 已否证的假说
 - 「JDK 17.0.13+ 回归」**已否证**：在 JDK 17.0.2 与 17.0.16 上崩溃完全一致，与 JDK 无关。曾在 `gradle.properties` 加机器相关 JDK pinning 测试，已回退删除（不可移植）。回退后 `runClient` 自动选用 17.0.16 仍正常进游戏，证明修复与 JDK 无关。
 
-### 9.4 关键命令与排错
+### 9.6 关键命令与排错
 ```powershell
 $env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-21.0.8.9-hotspot"
-.\gradlew.bat :1.20.1-forge:runClient --console=plain   # 打开 GUI，关闭窗口即结束
+.\gradlew.bat :1.20.1-forge:runClient --console=plain      # Forge：打开 GUI，关闭窗口即结束
+.\gradlew.bat :1.21.1-neoforge:runClient --console=plain   # NeoForge（加 --offline 可免重映射依赖再解析）
 ```
+> runClient 即使**游戏内崩溃**也可能 `BUILD SUCCESSFUL`：崩溃时进程退出，成功时停在标题页 idle。判定成败要看 `run/` 日志有无 `Exception`/`IllegalAccess` 与是否到 `AnimationLoader`/标题页，别只看 Gradle 退出码。
 - runConfig 的 `runDir` 指向项目根 `run/`。
 - 若上次运行被中断导致 `fabric-loom` 缓存锁残留（`Lock for cache ... is currently held by pid ...`），先 `.\gradlew.bat --stop` 再重跑（Loom 会自动清理 `ACQUIRED_PREVIOUS_OWNER_MISSING` 锁并重建缓存）。
 
@@ -340,3 +384,4 @@ $env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-21.0.8.9-hotspot"
 - 2026-06-30：初版按 ModDevGradle（来自官方/rotgruengelb 模板，纯 Java）。
 - 2026-06-30：**更正为 Architectury Loom（flat）+ Stonecutter**——依据 KLF testmod 真实组合（loom `1.11-SNAPSHOT`、`loom.platform` 节点属性、forge `47.4.4`/1.20.1、`modImplementation` 接入 KLF），补 KubeJS 经 `maven.latvian.dev` 的 Loom 软依赖接入。
 - 2026-07-01：补 §9——`runClient` 实测进游戏；记两个崩溃根因与修复（重映射 kotlin-stdlib 缺 `META-INF/versions/` → 排除；klf 被误声明为 mandatory MOD 依赖 → 删除）；§5/§7 补 KLF stdlib 与 KubeJS animated-gif-lib 的 `exclude`；§6 补「klf 不是依赖」警告；§8-2 标记已验证。
+- 2026-07-01（补 NeoForge）：补 §9.3/§9.4——NeoForge `runClient` 两个崩溃根因与修复（KLF langprovider 落 PLUGIN 模块层、读不到 game classpath 的 Kotlin → `forgeRuntimeLibrary` 注入 stdlib+reflect；`getGameBus` 跨层 `IllegalAccessError` → 游戏总线订阅改手动注册、`@EventBusSubscriber` 仅 Forge 保留）；§5 build.gradle.kts 片段同步为 loader 条件化；§9.1/9.2 加 loader 标签、旧 9.3/9.4 顺延为 9.5/9.6；§8-2 标 NeoForge 已验证。

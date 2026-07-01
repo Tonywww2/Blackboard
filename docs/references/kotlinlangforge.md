@@ -99,6 +99,10 @@ object ModEvents {
 
 > 本模组自有的 `BlackboardEvents`（见 internal-core-api.md §3）是**独立的轻量总线**，与 Forge/NeoForge 的 mod/game bus 无关；二者并存：KLF 用于挂接原版/加载器事件（聊天、生命周期），`BlackboardEvents` 用于对外开发者 API。
 
+> ⚠️ **NeoForge + Loom dev：游戏总线 `@EventBusSubscriber` 会崩**。KLF 的 langprovider 在 FML 的 PLUGIN 模块层运行，其 `AutomaticEventSubscriber` 处理**游戏总线**事件时会调 `getGameBus()`→`NeoForge.EVENT_BUS`（GAME 层类），PLUGIN 层读不到 GAME 层 → `IllegalAccessError: module klf does not read module neoforge`（mod 构造期崩）。**mod 总线**订阅（如 datagen `GatherDataEvent`）走 `getModBus`、不受影响。
+> 生产环境不崩（生产的 PLUGIN 层能读到 neoforge 平台类），仅 **Loom dev** 的模块拓扑触发。
+> **对策**：NeoForge 上游戏总线订阅**不要**用 `@EventBusSubscriber`，改在 GAME 层的 mod 构造代码里手动 `NeoForge.EVENT_BUS.register(obj)`；用 Stonecutter 让注解**仅 Forge 保留**。Forge 无此问题（无模块层隔离），照常用 `@EventBusSubscriber`。详见 [multiloader-build.md](multiloader-build.md) §9.4、[loader-platform-api.md](loader-platform-api.md) §6 C4。
+
 ---
 
 ## 4. 版本对照与坐标（已核实）
@@ -146,6 +150,8 @@ KLF 随包提供（版本以 KLF release 为准）：
 
 > ⚠️ **Forge 1.20.1 dev 运行的 stdlib 陷阱**：Loom 会把 KLF 传递来的 `kotlin-stdlib` 重映射成一份「保留 `Multi-Release: true` 清单标志、却丢了 `META-INF/versions/`」的 jar，使 Forge 1.20.1 的 securejarhandler 在 `runClient` 时崩溃（`UnionFileSystem$NoSuchFileException: /META-INF/versions`）。修复：在 KLF 的 `modImplementation` 上 `exclude` 掉 `org.jetbrains.kotlin:kotlin-stdlib`（Kotlin 插件已提供正版）。详见 multiloader-build.md §9.1。
 
+> ⚠️ **NeoForge 1.21.1 dev 运行的 stdlib 陷阱（与 Forge 相反）**：KLF 的 langprovider 在 FML 的 PLUGIN 模块层，读不到 Loom 放在 game classpath 的重映射 Kotlin，实例化时 `NoClassDefFoundError: kotlin/Pair` → FML 报 `Missing language klf`。**需**对 NeoForge 用 `forgeRuntimeLibrary` 把 kotlin-stdlib+kotlin-reflect 补到 dev 运行期 classpath（与 Forge 的 `exclude` 相反）。详见 multiloader-build.md §9.3。
+
 ---
 
 ## 6. Blackboard 用法基线
@@ -153,7 +159,7 @@ KLF 随包提供（版本以 KLF release 为准）：
 1. 两个 `mods.toml` 均设 `modLoader = "klf"`、`loaderVersion = "[1,)"`。
 2. 主类 `com.tonywww.blackboard.Blackboard`（object，`@Mod("blackboard")`）。
 3. 用 `//? if forge { ... //?} else { ... //?}` 隔离 `net.minecraftforge.*` 与 `net.neoforged.*` 的 import / API。
-4. 用 `@EventBusSubscriber` + `@SubscribeEvent` 挂接服务端聊天事件（作答入口）与生命周期（注册/冻结时机，见 internal-core-api.md §10）。监听器方法**非 private**。
+4. 用 `@EventBusSubscriber` + `@SubscribeEvent` 挂接服务端聊天事件（作答入口）与生命周期（注册/冻结时机，见 internal-core-api.md §10）。监听器方法**非 private**。**但 NeoForge + Loom dev 下游戏总线订阅须改手动注册**（见 §3 警告；本项目 `PlatformEvents` 即如此处理）。
 5. 依赖 KLF 运行时，不重复打包 Kotlin 库。
 
 ---
@@ -170,3 +176,4 @@ KLF 随包提供（版本以 KLF release 为准）：
 ## 修订记录
 - 2026-06-30：依据 KotlinLangForge README 归档（mods.toml、入口、事件总线、版本表、坐标、内置库）。标注 §7 待验证项。
 - 2026-07-01：补两条 dev 运行实测要点——§1「KLF 是 LANGPROVIDER 不是 MOD，勿写 klf 依赖」、§5「Loom 重映射的 kotlin-stdlib 缺 `META-INF/versions/` 会崩 Forge 1.20.1 runClient，需 `exclude`」。详见 multiloader-build.md §9。
+- 2026-07-01（补 NeoForge）：§3 补「NeoForge + Loom dev 游戏总线 `@EventBusSubscriber` 触 `getGameBus` 跨层 IllegalAccessError——改手动注册、注解仅 Forge 保留」警告；§5 补「NeoForge langprovider 在 PLUGIN 层读不到 game classpath 的 Kotlin → `Missing language klf`，需 `forgeRuntimeLibrary` 补 stdlib+reflect」；§6-4 补手动注册提醒。详见 multiloader-build.md §9.3-9.4。
