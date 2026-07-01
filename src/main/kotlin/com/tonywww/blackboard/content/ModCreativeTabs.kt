@@ -1,6 +1,7 @@
 package com.tonywww.blackboard.content
 
 import com.tonywww.blackboard.Blackboard
+import com.tonywww.blackboard.api.registry.BlackboardRegistries
 import net.minecraft.core.registries.Registries
 import net.minecraft.network.chat.Component
 import net.minecraft.world.item.CreativeModeTab
@@ -31,7 +32,13 @@ object ModCreativeTabs {
             .title(Component.translatable("itemGroup.${Blackboard.MOD_ID}"))
             .icon { ItemStack(ModItems.BLACKBOARD.get()) }
             .displayItems { _, output ->
+                // 基础/扩展黑板方块（各自随机出题）。
                 BlackboardBoards.tabItems().forEach { output.accept(it.get()) }
+                // 每个已注册生成器一份「基础黑板」变体（放置时绑定该生成器）。
+                val base = ModItems.BLACKBOARD.get()
+                BlackboardRegistries.QUESTION_GENERATORS.ids().forEach { genId ->
+                    output.accept(BlackboardBlockItem.stackWithGenerator(base, genId))
+                }
             }
             .build()
     })

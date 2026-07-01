@@ -54,6 +54,10 @@ open class BlackboardBlockEntity(pos: BlockPos, state: BlockState) :
     var boardId: String = ""
         private set
 
+    /** Pinned question generator id (from the placed item's NBT); `null` = use the type's selection. */
+    var generatorId: ResourceLocation? = null
+        private set
+
     /** Resolves [blackboardTypeId] against the frozen registry, or `null` if absent/unknown. */
     val blackboardType: BlackboardType?
         get() = blackboardTypeId?.let { BlackboardRegistries.BLACKBOARD_TYPES.get(it) }
@@ -145,6 +149,7 @@ open class BlackboardBlockEntity(pos: BlockPos, state: BlockState) :
 
     private fun writeSaveData(tag: CompoundTag, registries: HolderLookup.Provider) {
         blackboardTypeId?.let { tag.putString(KEY_TYPE, it.toString()) }
+        generatorId?.let { tag.putString(KEY_GENERATOR, it.toString()) }
         if (boardId.isNotEmpty()) tag.putString(KEY_BOARD_ID, boardId)
         tag.putInt(KEY_ATTEMPTS, attempts)
         question?.let { tag.put(KEY_QUESTION, it.toNbt(registries)) }
@@ -153,6 +158,8 @@ open class BlackboardBlockEntity(pos: BlockPos, state: BlockState) :
     private fun readSaveData(tag: CompoundTag, registries: HolderLookup.Provider) {
         blackboardTypeId =
             if (tag.contains(KEY_TYPE)) ResourceLocation.tryParse(tag.getString(KEY_TYPE)) else null
+        generatorId =
+            if (tag.contains(KEY_GENERATOR)) ResourceLocation.tryParse(tag.getString(KEY_GENERATOR)) else null
         boardId = tag.getString(KEY_BOARD_ID)
         attempts = tag.getInt(KEY_ATTEMPTS)
         question =
@@ -169,6 +176,7 @@ open class BlackboardBlockEntity(pos: BlockPos, state: BlockState) :
 
     companion object {
         private const val KEY_TYPE = "Type"
+        private const val KEY_GENERATOR = "Generator"
         private const val KEY_BOARD_ID = "BoardId"
         private const val KEY_ATTEMPTS = "Attempts"
         private const val KEY_QUESTION = "Question"

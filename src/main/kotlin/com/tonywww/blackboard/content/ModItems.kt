@@ -2,7 +2,6 @@ package com.tonywww.blackboard.content
 
 import com.tonywww.blackboard.Blackboard
 import com.tonywww.blackboard.platform.PlatformRegistration
-import net.minecraft.world.item.BlockItem
 import net.minecraft.world.item.Item
 //? if forge {
 import net.minecraftforge.eventbus.api.IEventBus
@@ -16,7 +15,7 @@ object ModItems {
     internal val REGISTER = PlatformRegistration.items()
 
     val BLACKBOARD: Supplier<Item> = REGISTER.register(Blackboard.MOD_ID, Supplier<Item> {
-        BlockItem(ModBlocks.BLACKBOARD.get(), Item.Properties())
+        BlackboardBlockItem(ModBlocks.BLACKBOARD.get(), Item.Properties())
     })
 
     fun register(bus: IEventBus) {

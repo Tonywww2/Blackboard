@@ -35,5 +35,9 @@ object BlackboardApi {
 
         @JvmField
         val TEXT: ResourceLocation = id("text")
+
+        /** 微积分题（导数/积分/极限等），归入 `#blackboard:calculus` 池。 */
+        @JvmField
+        val CALCULUS: ResourceLocation = id("calculus")
     }
 }

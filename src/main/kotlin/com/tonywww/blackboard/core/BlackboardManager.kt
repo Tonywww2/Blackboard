@@ -63,7 +63,15 @@ object BlackboardManager {
         val state = be.blockState
         val question = try {
             val selCtx = SelectionContextImpl(type, level, pos, state, player)
-            val generator = selectGenerator(type, selCtx)
+            // 优先使用放置时绑定的生成器（来自物品 NBT）；未绑定或 id 未注册则回退到类型选题（空判断）。
+            val pinned = be.generatorId?.let { id ->
+                BlackboardRegistries.QUESTION_GENERATORS.get(id)
+                    ?: run {
+                        logger.warn("黑板 board={} 指定的生成器 {} 未注册，回退默认选题", be.boardId, id)
+                        null
+                    }
+            }
+            val generator = pinned ?: selectGenerator(type, selCtx)
             if (generator == null) {
                 logger.warn("黑板 {} 无可用题目生成器（选题池为空），暂不出题", type.id)
                 return null

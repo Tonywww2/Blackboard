@@ -1,0 +1,43 @@
+package com.tonywww.blackboard
+
+//? if forge {
+import net.minecraftforge.common.ForgeConfigSpec
+import net.minecraftforge.fml.ModLoadingContext
+import net.minecraftforge.fml.config.ModConfig
+//?} else {
+/*import net.neoforged.neoforge.common.ModConfigSpec as ForgeConfigSpec
+import net.neoforged.fml.ModLoadingContext
+import net.neoforged.fml.config.ModConfig
+*///?}
+
+/**
+ * Standard loader config for Blackboard (COMMON type → `config/blackboard-common.toml`).
+ *
+ * Platform boundary: only the config-spec type and the FML packages differ between Forge 1.20.1 and
+ * NeoForge 1.21.1. NeoForge's `ModConfigSpec` is a source-compatible fork of Forge's `ForgeConfigSpec`,
+ * so it is import-aliased to `ForgeConfigSpec` and the whole body is shared.
+ */
+object BlackboardConfig {
+
+    private val builder = ForgeConfigSpec.Builder()
+
+    /**
+     * Debug: when enabled, sneak (shift) right-clicking a blackboard sends the interacting player the
+     * current question's text component. Off by default. Config key `debug.tellQuestionOnShiftClick`.
+     */
+    val tellQuestionOnShiftClick: ForgeConfigSpec.BooleanValue = builder
+        .comment("Debug: sneak (shift) right-click a blackboard to have it tell you the current question's text component.")
+        .define("debug.tellQuestionOnShiftClick", false)
+
+    /** The built config spec, registered by [register]. */
+    val SPEC: ForgeConfigSpec = builder.build()
+
+    /** Registers the COMMON config spec. Call during mod construction. */
+    fun register() {
+        //? if forge {
+        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC)
+        //?} else {
+        /*ModLoadingContext.get().activeContainer.registerConfig(ModConfig.Type.COMMON, SPEC)
+        *///?}
+    }
+}

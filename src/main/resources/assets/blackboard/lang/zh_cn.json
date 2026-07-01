@@ -1,5 +1,6 @@
 {
   "block.blackboard.blackboard": "黑板",
   "item.blackboard.blackboard": "黑板",
-  "itemGroup.blackboard": "黑板"
+  "itemGroup.blackboard": "黑板",
+  "tooltip.blackboard.generator": "生成器：%s"
 }

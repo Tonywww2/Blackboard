@@ -15,6 +15,7 @@
 | --- | --- | --- |
 | [internal-core-api.md](internal-core-api.md) | 注册表 `SimpleRegistry`、事件总线 `EventHook`、`Question`/`QuestionGenerator`/`BlackboardType` 数据模型与参考实现、上下文对象、选题算法、奖励流程、渲染接口、NBT 序列化模式、注册生命周期 | ✅ 已归档 |
 | [answer-format-and-validation.md](answer-format-and-validation.md) | 聊天作答解析 `AnswerFormat`/`ParsedAnswer` 默认语法、内置校验器 `Validators`（文字/数值/矩阵/表达式）的归一化与文本语法、`Component` 取纯文本 | ✅ 已归档 |
+| [calculus-module.md](calculus-module.md) | 微积分题库模块：表达式 `Expr` AST 与求导/化简/求值、LaTeX 生成 `toLatex` 与答案解析（LaTeX 归一化 + infix 文法 → `ExpressionEvaluator`）、各题型出题逻辑（求导/不定积分/定积分/极限，逆向积分法）、数值抽样判题（含 +C 两点差）、三类拆分（`CalculusExpr`/`CalculusProblems`/`CalculusGenerators`）、难度分级与两阶段实装 | 📝 设计（待实装） |
 
 > 内部参考中标注 `【平台边界】` 的位置依赖加载器/版本特定 API（如 `Component` 的 NBT/JSON 编解码），其**具体实现**归入下方「外部参考」，在拿到资料前不实现。
 
@@ -62,3 +63,4 @@
 - 2026-06-30：收到作者提供的 P0 资料（Stonecutter、官方/rotgruengelb 模板、KotlinLangForge），归档 stonecutter.md、multiloader-build.md、kotlinlangforge.md；关闭待补清单中的 A、B。依然待补：C（加载器内 API）、D（KubeJS）、E（ApricityUI）、F（数学库选型）。
 - 2026-06-30：收到 C（FarmersDelight 1.20/1.21 分支）、D（SlashBlade-SenDims kubejs）资料，归档 loader-platform-api.md（C1/C2/C3 + 注册/同步/网络差异）、kubejs-integration.md（KubeJS 6 插件模式）；作者明确 E 仅传 `Component`、F 完全由 `validate` 处理，二者关闭。剩余仅「仍需验证」项（C4/C5/C6、KLF 配置名/版本、KubeJS 7）。
 - 2026-06-30：作者指示 C4/C5/C6 「导入后查反编译源码」；其余两项自行搜索后：**重大更正** multiloader-build.md 由 ModDevGradle → **Architectury Loom（flat）**（依据 KLF testmod：loom 1.11-SNAPSHOT、`loom.platform` 节点属性、forge 47.4.4/1.20.1、`modImplementation`）；KubeJS 7 经官方 README 确认仍用 `kubejs.plugins.txt` + `KubeJSPlugin`（包名变为 `….plugin.KubeJSPlugin`）+ `EventGroup`，Gradle 经 `maven.latvian.dev`。
+- 2026-07-01：新增内部参考 [calculus-module.md](calculus-module.md)：微积分题库模块开发文档（三类拆分 `CalculusExpr`/`CalculusProblems`/`CalculusGenerators`、表达式 AST 与 LaTeX 生成/解析、各题型出题逻辑与逆向积分法、数值抽样判题含 +C 两点差、难度分级与两阶段实装）。`BlackboardTags.CALCULUS` 已入代码；生成器与黑板类型待实装。

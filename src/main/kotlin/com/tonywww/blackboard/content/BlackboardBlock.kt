@@ -1,10 +1,14 @@
 package com.tonywww.blackboard.content
 
+import com.tonywww.blackboard.BlackboardConfig
 import com.tonywww.blackboard.core.BlackboardManager
 import net.minecraft.core.BlockPos
 import net.minecraft.core.Direction
+import net.minecraft.network.chat.Component
 import net.minecraft.server.level.ServerPlayer
+import net.minecraft.world.InteractionResult
 import net.minecraft.world.entity.LivingEntity
+import net.minecraft.world.entity.player.Player
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.context.BlockPlaceContext
 import net.minecraft.world.level.Level
@@ -17,6 +21,10 @@ import net.minecraft.world.level.block.state.BlockBehaviour
 import net.minecraft.world.level.block.state.BlockState
 import net.minecraft.world.level.block.state.StateDefinition
 import net.minecraft.world.level.block.state.properties.DirectionProperty
+import net.minecraft.world.phys.BlockHitResult
+//? if forge {
+import net.minecraft.world.InteractionHand
+//?}
 //? if neoforge {
 /*import com.mojang.serialization.MapCodec
 *///?}
@@ -47,6 +55,40 @@ class BlackboardBlock(properties: BlockBehaviour.Properties) : BaseEntityBlock(p
 
     override fun getStateForPlacement(context: BlockPlaceContext): BlockState =
         defaultBlockState().setValue(FACING, context.horizontalDirection.opposite)
+
+    //? if forge {
+    override fun use(
+        state: BlockState,
+        level: Level,
+        pos: BlockPos,
+        player: Player,
+        hand: InteractionHand,
+        hit: BlockHitResult,
+    ): InteractionResult = tellQuestion(level, pos, player)
+    //?} else {
+    /*override fun useWithoutItem(
+        state: BlockState,
+        level: Level,
+        pos: BlockPos,
+        player: Player,
+        hit: BlockHitResult,
+    ): InteractionResult = tellQuestion(level, pos, player)
+    *///?}
+
+    /**
+     * Debug interaction: when [BlackboardConfig.tellQuestionOnShiftClick] is enabled and the player is
+     * sneaking, sends them the current question's text component (server-side). Otherwise returns
+     * [InteractionResult.PASS] so normal (non-sneak) interaction and placement are unaffected.
+     */
+    private fun tellQuestion(level: Level, pos: BlockPos, player: Player): InteractionResult {
+        if (!player.isSecondaryUseActive) return InteractionResult.PASS
+        if (!BlackboardConfig.tellQuestionOnShiftClick.get()) return InteractionResult.PASS
+        if (!level.isClientSide) {
+            val content = (level.getBlockEntity(pos) as? BlackboardBlockEntity)?.question?.content
+            player.sendSystemMessage(content ?: Component.literal("[Blackboard] 该黑板暂无题目"))
+        }
+        return InteractionResult.sidedSuccess(level.isClientSide)
+    }
 
     override fun setPlacedBy(
         level: Level,

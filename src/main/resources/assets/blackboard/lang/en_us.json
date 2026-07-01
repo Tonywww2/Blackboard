@@ -1,5 +1,6 @@
 {
   "block.blackboard.blackboard": "Blackboard",
   "item.blackboard.blackboard": "Blackboard",
-  "itemGroup.blackboard": "Blackboard"
+  "itemGroup.blackboard": "Blackboard",
+  "tooltip.blackboard.generator": "Generator: %s"
 }

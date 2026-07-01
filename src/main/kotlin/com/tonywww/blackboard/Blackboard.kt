@@ -10,6 +10,7 @@ import net.neoforged.fml.common.Mod
 
 import com.tonywww.blackboard.builtin.BuiltinBlackboardTypes
 import com.tonywww.blackboard.builtin.BuiltinGenerators
+import com.tonywww.blackboard.builtin.calculus.CalculusGenerators
 import com.tonywww.blackboard.compat.kubejs.BlackboardKubePlugin
 import com.tonywww.blackboard.content.ModBlockEntities
 import com.tonywww.blackboard.content.ModBlocks
@@ -43,6 +44,9 @@ object Blackboard {
     init {
         val bus = MOD_BUS
 
+        // Standard loader config (COMMON → config/blackboard-common.toml).
+        BlackboardConfig.register()
+
         // Deferred content onto the KLF mod bus.
         ModBlocks.register(bus)
         ModItems.register(bus)
@@ -52,6 +56,10 @@ object Blackboard {
         // Built-in generators then types (order per P5-B); registered into the later-frozen registries.
         BuiltinGenerators.register()
         BuiltinBlackboardTypes.register()
+
+        // Calculus module generators + its ByTag(CALCULUS) blackboard type (before freeze).
+        CalculusGenerators.register()
+        CalculusGenerators.registerType()
 
         // Soft dependency: only touch the KubeJS plugin class when KubeJS is loaded, otherwise its
         // KubeJS superclass would NoClassDefFound on a KubeJS-less install (P4-C).
