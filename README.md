@@ -48,7 +48,7 @@
 | **事件** | `BlackboardEvents.*`（见 [事件总览](#事件总览)），Java/KT 与 KubeJS 均可监听。 |
 | **热重载** | `/blackboard reload`（权限 2）在运行期重建生成器注册表（见下）。 |
 
-标签（tag）就是「题库/生成器库」：内置 `#blackboard:math`、`#blackboard:text`、`#blackboard:default`、`#blackboard:calculus`。一个生成器可带多个标签，一个黑板类型可指定从某个标签池选题。内置生成器清单见 [内置题目生成器](#内置题目生成器)。
+标签（tag）就是「题库/生成器库」：内置 `#blackboard:math`、`#blackboard:text`、`#blackboard:default`、`#blackboard:calculus`、`#blackboard:linear_algebra`、`#blackboard:logic`。一个生成器可带多个标签，一个黑板类型可指定从某个标签池选题。内置生成器清单见 [内置题目生成器](#内置题目生成器)。
 
 ---
 
@@ -71,8 +71,9 @@
 | `/blackboard reload` | 热重载题目生成器 |
 | `/blackboard settype <typeId>` | 把你正注视的黑板改为指定类型并重新出题（用于在世界内使用自定义类型/题库） |
 | `/blackboard generate` | 让你正注视的黑板重新出题 |
+| `/blackboard difficulty <0–10> \| clear` | 设置 / 清除你正注视黑板的每板难度覆盖，并重新出题 |
 
-> ℹ️ 题面文本已同步到客户端，但**方块上的可视渲染**是可选阶段（P8-A，默认 No-op），详见 [现状与限制](#现状与限制路线图)。
+> ℹ️ **可视渲染**：安装 **ApricityUI（晴雪UI）** 后，题面（含 LaTeX 公式与矩阵）会经 JLaTeXMath 直接渲染在黑板面上、左上角显示黑板 ID；未安装时模组仍可正常通过聊天游玩。Forge 1.20.1 与 NeoForge 1.21.1 均已支持。
 
 ---
 
@@ -105,16 +106,58 @@
 | `calc_differentiation` | 6 | 求导（多项式 / 基本函数 / 和差 / 积 / 商 / 链式） | `d/dx(3*x^2+2*x)` | 表达式，如 `6*x+2` | 抽样等价 |
 | `calc_indef_integral` | 4 | 不定积分（逆向造原函数） | `∫ (6*x+2) dx` | 表达式（`+C` 可选），如 `3*x^2+2*x` | 抽样等价（消 `+C`） |
 
-**难度调节**：题目复杂度随黑板 `difficulty`（0–3）提升。数值三型始终为整数答案；符号求导 `calc_differentiation` 依难度取 0→多项式、1→基本函数/和差、2→积/商/链式、3→链式。
+**难度调节**：题目复杂度随黑板 `difficulty`（0–10）提升。数值三型始终为整数答案；符号求导 `calc_differentiation` 依难度取 0→多项式、1→基本函数/和差、2→积/商/链式、≥3→链式。
 
 **符号题作答**：作答符号题时直接输入表达式，支持 `+ - * / ^`、隐式乘法（`2x`、`3sin(x)`、`(x+1)(x-1)`）、一元负、函数 `sin cos tan exp ln sqrt`、常量 `pi e`、变量 `x`，以及 LaTeX 子集（`\frac{}{}`、`\sqrt{}`、`\cdot`、`x^{}` 等）。同一函数的不同等价写法都算对；不定积分可省略 `+C` 或写任意常数。
+
+### 线性代数题（`#blackboard:linear_algebra` 池）
+
+线性代数生成器只带 `linear_algebra` 标签，由内置黑板类型 `blackboard:linear_algebra` 出题（`/blackboard settype blackboard:linear_algebra` 绑定）。**矩阵 / 向量答案**用嵌套方括号 `[[a,b],[c,d]]`（列向量写 `[[x],[y]]`）**或 LaTeX**（`\begin{pmatrix}a & b \\ c & d\end{pmatrix}`，`bmatrix` 等亦可）作答；点积答案是一个整数。
+
+| 生成器 id | 权重 | 题型 | 题面示例 | 答案形式 |
+| --- | --- | --- | --- | --- |
+| `la_dot` | 6 | 向量点积 | `[1,2,3] · [4,5,6]` | 整数，如 `32` |
+| `la_eval` | 6 | 解线性方程组 `Ax=b`（给 A、b 求 x） | `Ax = b` | 列向量 `[[x1],[x2]]` |
+| `la_matvec` | 6 | 矩阵-向量积 `A·v` | `A·[[5],[6]]` | 列向量 `[[..],[..]]` |
+| `la_inverse` | 4 | 逆矩阵 `A⁻¹` | `A^{-1}` | 矩阵 `[[..],[..]]` |
+| `la_singular` | 5 | 奇异值 σ(A)（**降序**） | `σ(A)` | 列向量 `[[σ1],…]`（σ1≥σ2） |
+
+**难度调节**：随黑板 `difficulty`（0–10）矩阵越来越大——点积 2→7 维、矩阵-向量 2→6 阶、解方程 2→5 阶、逆矩阵 2→4 阶、奇异值 2→4 阶。逆矩阵 / 解方程的 A 构造为**非三角稠密整数阵**（保证整数逆 / 整数解，需完整消元、不能直接回代）。
+
+### 逻辑值运算题（`#blackboard:logic` 池）
+
+逻辑生成器只带 `logic` 标签，由内置黑板类型 `blackboard:logic` 出题（`/blackboard settype blackboard:logic` 绑定，最多作答 2 次）。基础算符 AND / OR / NOT，`难度≥2` 加 XOR、`≥5` 加蕴含 → / ↔（求值题）。
+
+| 生成器 id | 权重 | 题型 | 题面示例 | 答案形式 |
+| --- | --- | --- | --- | --- |
+| `logic_eval` | 6 | 常量求值（叶子全为 T/F，求整式真值） | `¬(T ∧ F) ∨ T` | 真 / 假（`true`/`false`/`yes`/`no`/`1`/`0` 等宽松识别） |
+| `logic_simplify` | 6 | 布尔化简（把复杂式化简为最简等价形式） | `Simplify: p ∨ (q ∧ ¬q)` | 与原式**真值表等价**且**足够简**的表达式，如 `p` |
+
+**难度调节**：随 `difficulty`（0–10）表达式规模与算符集增大。
 
 ### 内置黑板类型
 
 | 类型 id | 选题池 | 说明 |
 | --- | --- | --- |
 | `blackboard:default` | `ByTag(default)` | 放置黑板的默认类型；出上表全部算术 / 文字题 |
-| `blackboard:calculus` | `ByTag(calculus)` | 微积分题库；用 `/blackboard settype blackboard:calculus` 绑定到某块黑板 |
+| `blackboard:calculus` | `ByTag(calculus)` | 微积分题库；`/blackboard settype blackboard:calculus` 绑定 |
+| `blackboard:linear_algebra` | `ByTag(linear_algebra)` | 线性代数题库；`/blackboard settype blackboard:linear_algebra` 绑定 |
+| `blackboard:logic` | `ByTag(logic)` | 逻辑值运算题库；`/blackboard settype blackboard:logic` 绑定（最多作答 2 次） |
+
+---
+
+## 配置
+
+COMMON 配置文件 `config/blackboard-common.toml`：
+
+| 配置键 | 默认 | 作用 |
+| --- | --- | --- |
+| `question.difficultyBase` | `0` | 全局难度基线（0=最易，越大越难；每种黑板类型可再叠加偏移，总和钳制到 `0..10`） |
+| `pool.calculusInDefaultPool` | `false` | 是否把微积分题也放进默认黑板池 |
+| `pool.linearAlgebraInDefaultPool` | `false` | 是否把线性代数题也放进默认黑板池 |
+| `pool.logicInDefaultPool` | `false` | 是否把逻辑题也放进默认黑板池 |
+
+> `pool.*InDefaultPool` 在服务器启动 / `/blackboard reload` 时生效；每块黑板还可用 `/blackboard difficulty` 单独覆盖难度。
 
 ---
 
@@ -697,7 +740,7 @@ BlackboardBoards.register('quiz_board', 'blackboard:default')
 | 创建新黑板方块并绑定类型（Mod / KubeJS） | ✅ 已实现 | `BlackboardBoards.register(path, typeId)` / `bind(...)`；KubeJS startup 脚本亦可调用 |
 | 题库为空不崩溃 | ✅ 已实现 | 移除全部生成器时优雅跳过出题（`selectGenerator` 空池返回 `null`，答题回提示） |
 | 更友好的 KubeJS 生成器 DSL | 🔵 可选 | 目前需 `Java.loadClass` 直接用 Java 构建器 |
-| 客户端渲染（题面上屏） | 🔵 可选 | 渲染接口已就绪，默认 No-op；接入 ApricityUI 为可选阶段（P8-A） |
+| 客户端渲染（题面上屏） | ✅ 已实现 | 接入 ApricityUI（晴雪UI）：题面 LaTeX / 矩阵经 JLaTeXMath 渲染在黑板上，Forge 1.20.1 与 NeoForge 1.21.1 均支持；未装 AUI 时优雅降级为聊天游玩 |
 
 ---
 
