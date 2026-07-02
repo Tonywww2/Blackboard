@@ -270,6 +270,7 @@ fun normalizeLatex(input: String): String {
     s = s.replace("\\sin", "sin").replace("\\cos", "cos").replace("\\tan", "tan")
     s = s.replace("\\ln", "ln").replace("\\exp", "exp").replace("\\sqrt", "sqrt").replace("\\pi", "pi")
     s = s.replace("√", "sqrt").replace("π", "pi").replace("·", "*").replace("×", "*").replace("−", "-")
+    s = s.replace("\\dfrac", "\\frac").replace("\\tfrac", "\\frac")
     var prev: String
     do {
         prev = s

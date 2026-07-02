@@ -60,13 +60,13 @@ object Validators {
         }
     }
 
-    /** 矩阵题：解析 `[[a,b],[c,d]]` 后逐元素按容差比较。 */
+    /** 矩阵题：解析 `[[a,b],[c,d]]` 或 LaTeX（`\begin{pmatrix}…\end{pmatrix}` 等）后逐元素按容差比较。 */
     fun matrix(
         expectedKey: String = "answer",
         tolerance: Double = 1e-9,
     ): (Question, AnswerContext) -> AnswerResult = { q, a ->
         val exp = parseMatrix(q.getString(expectedKey))
-        val got = parseMatrix(a.text)
+        val got = parseAnswerMatrix(a.text)
         when {
             got == null || exp == null -> if (got == null) AnswerResult.invalid() else AnswerResult.incorrect()
             got.size != exp.size || got.indices.any { got[it].size != exp[it].size } -> AnswerResult.incorrect()
@@ -130,6 +130,31 @@ object Validators {
             row.split(",").map { parseNumber(it) ?: return null }
         }
         return rows
+    }
+
+    /** 解析玩家矩阵答案：先按 `[[a,b],[c,d]]`，失败再按 LaTeX 矩阵。两种写法皆可作答。 */
+    fun parseAnswerMatrix(s: String): List<List<Double>>? = parseMatrix(s) ?: parseLatexMatrix(s)
+
+    /**
+     * 解析 LaTeX 矩阵 `\begin{Xmatrix} a & b \\ c & d \end{Xmatrix}`（X∈p/b/B/v/V/空）：
+     * 行以 `\\` 分隔、列以 `&` 分隔；单元支持整数/小数/`\frac{a}{b}`、可选花括号包裹与 `\,` 等间距。非法返回 null。
+     */
+    fun parseLatexMatrix(s: String): List<List<Double>>? {
+        val body = Regex("""\\begin\{[pbBvV]?matrix\}(.*?)\\end\{[pbBvV]?matrix\}""", RegexOption.DOT_MATCHES_ALL)
+            .find(s.trim())?.groupValues?.get(1) ?: return null
+        val rows = body.split("\\\\").map { it.trim() }.filter { it.isNotEmpty() }
+        if (rows.isEmpty()) return null
+        val cells = rows.map { row -> row.split("&").map { parseLatexNumber(it) ?: return null } }
+        if (cells.any { it.size != cells[0].size }) return null
+        return cells
+    }
+
+    /** LaTeX 单元数值：去空白/`\,;!`，`\frac{a}{b}`→`a/b`，去花括号，回落 [parseNumber]。 */
+    private fun parseLatexNumber(cell: String): Double? {
+        var t = cell.replace("\\s".toRegex(), "").replace("\\,", "").replace("\\;", "").replace("\\!", "")
+        t = Regex("""\\d?frac\{([^{}]*)\}\{([^{}]*)\}""").replace(t) { "${it.groupValues[1]}/${it.groupValues[2]}" }
+        t = t.removePrefix("{").removeSuffix("}")
+        return parseNumber(t)
     }
 
     fun matricesEqual(x: List<List<Double>>, y: List<List<Double>>, tol: Double): Boolean =

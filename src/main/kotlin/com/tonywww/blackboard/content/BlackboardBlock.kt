@@ -89,9 +89,9 @@ class BlackboardBlock(properties: BlockBehaviour.Properties) : BaseEntityBlock(p
             val question = be?.question
             if (be != null && question != null) {
                 player.sendSystemMessage(question.content)
-                player.sendSystemMessage(Component.literal("[Blackboard] boardId: ${be.boardId}"))
+                player.sendSystemMessage(Component.translatable("message.blackboard.board_id", be.boardId))
             } else {
-                player.sendSystemMessage(Component.literal("[Blackboard] 该黑板暂无题目"))
+                player.sendSystemMessage(Component.translatable("message.blackboard.no_question_yet"))
             }
         }
         return InteractionResult.sidedSuccess(level.isClientSide)

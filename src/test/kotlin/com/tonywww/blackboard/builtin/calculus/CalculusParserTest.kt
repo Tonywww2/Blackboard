@@ -47,6 +47,8 @@ class CalculusParserTest {
     @Test
     fun `latex subset normalization`() {
         approx(evalOf("\\frac{1}{2}x^2", 2.0), 2.0)
+        approx(evalOf("\\dfrac{1}{2}x^2", 2.0), 2.0)
+        approx(evalOf("\\tfrac{1}{2}x^2", 2.0), 2.0)
         approx(evalOf("2\\cos\\left(x\\right)", 0.0), 2.0)
         approx(evalOf("\\sqrt{x}", 9.0), 3.0)
         approx(evalOf("√(x)", 16.0), 4.0)

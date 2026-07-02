@@ -49,7 +49,7 @@ class LinearAlgebraGeneratorsTest {
 
     @Test
     fun `type resolves to all generators`() {
-        assertEquals(4, LinearAlgebraGenerators.ALL.size)
+        assertEquals(5, LinearAlgebraGenerators.ALL.size)
         assertEquals(
             GeneratorPool.ByTag(BlackboardTags.LINEAR_ALGEBRA),
             LinearAlgebraGenerators.LINEAR_ALGEBRA_TYPE.pool,
@@ -87,6 +87,7 @@ class LinearAlgebraGeneratorsTest {
             LinearAlgebraGenerators.EVAL,
             LinearAlgebraGenerators.MATVEC,
             LinearAlgebraGenerators.INVERSE,
+            LinearAlgebraGenerators.SINGULAR,
         )
         for (gen in gens) for (diff in 0..10) for (seed in 1L..15L) {
             val q = gen.generate(genCtx(seed, diff))

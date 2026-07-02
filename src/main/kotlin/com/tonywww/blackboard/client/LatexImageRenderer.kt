@@ -31,7 +31,7 @@ object LatexImageRenderer {
 
     private val logger = LoggerFactory.getLogger("Blackboard/Latex")
 
-    private const val POINT_SIZE = 40f
+    private const val POINT_SIZE = 96f
     private const val INSET = 6
     private val CHALK = Color(0xF4, 0xFF, 0xF7)
 
@@ -78,12 +78,39 @@ object LatexImageRenderer {
     }
 
     private fun renderToFile(content: String, key: String): Result {
-        val image = renderImage(content)
         val dir = Minecraft.getInstance().gameDirectory.resolve("apricity/blackboard/$GEN_DIR")
         dir.mkdirs()
-        ImageIO.write(image, "png", File(dir, "$key.png"))
+        val file = File(dir, "$key.png")
+        // Cross-session disk cache: an identical PNG (content+size hash) may already be on disk from a
+        // previous run. Reuse it by reading only its header dimensions, skipping the JLaTeXMath render.
+        if (file.isFile) {
+            readPngSize(file)?.let { return Result("$GEN_DIR/$key.png", it.first, it.second) }
+        }
+        val image = renderImage(content)
+        ImageIO.write(image, "png", file)
         return Result("$GEN_DIR/$key.png", image.width, image.height)
     }
+
+    /** Read a PNG's pixel dimensions from its header (no full decode), or null if unreadable. */
+    private fun readPngSize(file: File): Pair<Int, Int>? =
+        try {
+            ImageIO.createImageInputStream(file)?.use { iis ->
+                val readers = ImageIO.getImageReaders(iis)
+                if (readers.hasNext()) {
+                    val reader = readers.next()
+                    try {
+                        reader.input = iis
+                        reader.getWidth(0) to reader.getHeight(0)
+                    } finally {
+                        reader.dispose()
+                    }
+                } else {
+                    null
+                }
+            }
+        } catch (_: Throwable) {
+            null
+        }
 
     /** LaTeX first (via JLaTeXMath); on any parse/render failure fall back to a plain-text raster. */
     private fun renderImage(content: String): BufferedImage =
@@ -150,7 +177,10 @@ object LatexImageRenderer {
     }
 
     private fun hash(content: String): String {
-        val digest = MessageDigest.getInstance("SHA-256").digest(content.toByteArray(Charsets.UTF_8))
+        // Seed the hash with the render size so changing POINT_SIZE yields new files (never reuses a
+        // stale lower-resolution PNG) and different resolutions can coexist on disk.
+        val seed = "${POINT_SIZE.toInt()}:$content"
+        val digest = MessageDigest.getInstance("SHA-256").digest(seed.toByteArray(Charsets.UTF_8))
         return buildString(16) { for (i in 0 until 8) append("%02x".format(digest[i])) }
     }
 }

@@ -6,6 +6,8 @@ import com.tonywww.blackboard.api.BlackboardApi.BlackboardTags
 import com.tonywww.blackboard.api.board.BlackboardType
 import com.tonywww.blackboard.api.board.GeneratorPool
 import com.tonywww.blackboard.api.event.BlackboardEvents
+import com.tonywww.blackboard.api.question.AnswerContext
+import com.tonywww.blackboard.api.question.AnswerResult
 import com.tonywww.blackboard.api.question.Question
 import com.tonywww.blackboard.api.question.QuestionGenerator
 import com.tonywww.blackboard.api.question.Questions
@@ -22,8 +24,8 @@ import net.minecraft.util.RandomSource
 /**
  * 逻辑值运算模块 · 装配为 [QuestionGenerator]（仿 `builtin/calculus/CalculusGenerators`）。
  *
- * 两个生成器：[EVALUATION]（常量求值 `logic_eval`）与 [ASSIGNMENT]（变量赋值 `logic_assign`），
- * 均打 `#blackboard:logic` 标签，判题走宽松 [Validators.boolean]。配套内置黑板类型 [LOGIC_TYPE]。
+ * 两个生成器：[EVALUATION]（常量求值 `logic_eval`，判题走宽松 [Validators.boolean]）与 [SIMPLIFY]
+ * （布尔化简 `logic_simplify`，判题走真值表等价 + 复杂度约束）。均打 `#blackboard:logic` 标签，配套内置黑板类型 [LOGIC_TYPE]。
  * 入口 `Blackboard.kt` 在冻结前调 [registerReloadable] + [registerType]。
  */
 object LogicGenerators {
@@ -32,12 +34,12 @@ object LogicGenerators {
 
     val EVALUATION: QuestionGenerator = boolGen(id("logic_eval")) { r, d -> LogicProblems.evaluation(r, d) }
 
-    val ASSIGNMENT: QuestionGenerator = boolGen(id("logic_assign")) { r, d -> LogicProblems.assignment(r, d) }
+    val SIMPLIFY: QuestionGenerator = simplifyGen(id("logic_simplify"))
 
-    /** 两个逻辑生成器（常量求值 + 变量赋值）。 */
-    val ALL: List<QuestionGenerator> = listOf(EVALUATION, ASSIGNMENT)
+    /** 两个逻辑生成器（常量求值 + 布尔化简）。 */
+    val ALL: List<QuestionGenerator> = listOf(EVALUATION, SIMPLIFY)
 
-    /** 内置逻辑黑板类型：`ByTag(LOGIC)` 选题、默认发奖、`!ans` 作答、不限次。 */
+    /** 内置逻辑黑板类型：`ByTag(LOGIC)` 选题、默认发奖、`!ans` 作答、最多 2 次作答。 */
     val LOGIC_TYPE: BlackboardType =
         BlackboardType.builder(id("logic"))
             .pool(GeneratorPool.ByTag(BlackboardTags.LOGIC))
@@ -45,7 +47,7 @@ object LogicGenerators {
             .onSolved(::defaultReward)
             .rewardLootTable(id("rewards/default"))
             .answerFormat(DefaultAnswerFormat)
-            .maxAttempts(0)
+            .maxAttempts(2)
             .build()
 
     /**
@@ -92,4 +94,37 @@ object LogicGenerators {
             }
             .validate(Validators.boolean())
             .build()
+
+    /** 构建化简题生成器：存原式（等价基准）+ 目标复杂度，判题用 [validateSimplify]。 */
+    private fun simplifyGen(gid: ResourceLocation): QuestionGenerator =
+        QuestionGenerator.builder(gid)
+            .tag(BlackboardTags.LOGIC)
+            .weight(6)
+            .generate { ctx ->
+                val sp = LogicProblems.simplify(ctx.random, ctx.difficulty)
+                Questions.builder(gid)
+                    .content(Component.literal(sp.stemLatex))
+                    .prompt(Component.literal(sp.stemInfix))
+                    .store("answer", sp.baseInfix)
+                    .store("targetSize", sp.targetSize.toDouble())
+                    .build()
+            }
+            .validate(::validateSimplify)
+            .build()
+
+    /**
+     * 化简题判题：解析玩家输入的布尔表达式（失败→Invalid）；与原式 [equivalent]（真值表等价）、
+     * 未引入原式外的变量、且复杂度（[BoolExpr.size]）不超过标准最简 → Correct，否则 Incorrect。
+     */
+    private fun validateSimplify(q: Question, a: AnswerContext): AnswerResult {
+        val user = BoolParser.parse(a.text) ?: return AnswerResult.invalid()
+        val base = BoolParser.parse(q.getString("answer")) ?: return AnswerResult.invalid()
+        val target = q.getDouble("targetSize").toInt()
+        return when {
+            !base.vars().containsAll(user.vars()) -> AnswerResult.incorrect()
+            !equivalent(base, user) -> AnswerResult.incorrect()
+            user.size() > target -> AnswerResult.incorrect()
+            else -> AnswerResult.correct()
+        }
+    }
 }

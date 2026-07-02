@@ -32,6 +32,8 @@ object ModCreativeTabs {
             .title(Component.translatable("itemGroup.${Blackboard.MOD_ID}"))
             .icon { ItemStack(ModItems.BLACKBOARD.get()) }
             .displayItems { _, output ->
+                // 粉笔：右键黑板打开作答界面。
+                output.accept(ItemStack(ModItems.CHALK.get()))
                 // 基础/扩展黑板方块（各自随机出题）。
                 BlackboardBoards.tabItems().forEach { output.accept(it.get()) }
                 // 每个已注册生成器一份「基础黑板」变体（放置时绑定该生成器）。

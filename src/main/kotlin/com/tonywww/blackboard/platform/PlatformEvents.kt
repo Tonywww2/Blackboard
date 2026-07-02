@@ -51,10 +51,12 @@ import net.neoforged.neoforge.event.server.ServerStoppingEvent
 //?}
 object PlatformEvents {
 
-    /** 服务端聊天 → 作答路由（§13(2)：当前不拦截原聊天，仅旁路解析）。 */
+    /** 服务端聊天 → 作答路由；命中作答时拦截原 `!ans …` 行（改由 [ChatHandler] 广播包装后的回答）。 */
     @SubscribeEvent
     fun onServerChat(event: ServerChatEvent) {
-        ChatHandler.handle(event.player, event.rawText)
+        if (ChatHandler.handle(event.player, event.rawText)) {
+            event.isCanceled = true
+        }
     }
 
     /** 服务器即将启动：注册阶段（含 KubeJS startup）已结束——快照启动基线、触发可重载层、冻结注册表（internal-core-api §10）。 */
@@ -78,7 +80,7 @@ object PlatformEvents {
                     Commands.literal("reload").executes { ctx ->
                         val count = GeneratorReload.reload(ctx.source.server)
                         ctx.source.sendSuccess(
-                            { Component.literal("Blackboard: reloaded question generators ($count total)") },
+                            { Component.translatable("command.blackboard.reloaded", count) },
                             true,
                         )
                         count
@@ -90,7 +92,7 @@ object PlatformEvents {
                         Commands.argument("type", ResourceLocationArgument.id()).executes { ctx ->
                             val typeId = ResourceLocationArgument.getId(ctx, "type")
                             if (!BlackboardRegistries.BLACKBOARD_TYPES.contains(typeId)) {
-                                ctx.source.sendFailure(Component.literal("Blackboard: unknown blackboard type $typeId"))
+                                ctx.source.sendFailure(Component.translatable("command.blackboard.unknown_type", typeId.toString()))
                                 return@executes 0
                             }
                             val be = lookedAtBoard(ctx.source) ?: return@executes 0
@@ -98,10 +100,10 @@ object PlatformEvents {
                             val q = BlackboardManager.generateQuestion(be, ctx.source.player)
                             ctx.source.sendSuccess(
                                 {
-                                    Component.literal(
-                                        "Blackboard: set type to $typeId" +
-                                            if (q == null) " (no question could be generated)" else "",
-                                    )
+                                    val msg = Component.empty()
+                                        .append(Component.translatable("command.blackboard.set_type", typeId.toString()))
+                                    if (q == null) msg.append(Component.translatable("command.blackboard.regen_failed_suffix"))
+                                    msg
                                 },
                                 true,
                             )
@@ -117,10 +119,8 @@ object PlatformEvents {
                         val q = BlackboardManager.generateQuestion(be, ctx.source.player)
                         ctx.source.sendSuccess(
                             {
-                                Component.literal(
-                                    if (q != null) "Blackboard: regenerated question"
-                                    else "Blackboard: failed (no candidate generator?)",
-                                )
+                                if (q != null) Component.translatable("command.blackboard.regenerated")
+                                else Component.translatable("command.blackboard.generate_failed")
                             },
                             true,
                         )
@@ -150,12 +150,13 @@ object PlatformEvents {
         if (be.blackboardTypeId == null) be.setBlackboardType(BlackboardApi.DEFAULT_TYPE_ID)
         be.setDifficultyOverride(value)
         val q = BlackboardManager.generateQuestion(be, source.player)
-        val label = value?.let { "set difficulty to $it" } ?: "cleared difficulty override"
         source.sendSuccess(
             {
-                Component.literal(
-                    "Blackboard: $label" + if (q == null) " (no question could be generated)" else " and regenerated",
-                )
+                val label = if (value != null) Component.translatable("command.blackboard.difficulty_set", value)
+                else Component.translatable("command.blackboard.difficulty_cleared")
+                val suffix = if (q == null) Component.translatable("command.blackboard.regen_failed_suffix")
+                else Component.translatable("command.blackboard.regen_ok_suffix")
+                Component.empty().append(label).append(suffix)
             },
             true,
         )
@@ -174,11 +175,11 @@ object PlatformEvents {
         val end = eye.add(look.x * reach, look.y * reach, look.z * reach)
         val hit = level.clip(ClipContext(eye, end, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player))
         if (hit.type != HitResult.Type.BLOCK) {
-            source.sendFailure(Component.literal("Blackboard: look at a blackboard first"))
+            source.sendFailure(Component.translatable("command.blackboard.look_first"))
             return null
         }
         val be = level.getBlockEntity(hit.blockPos) as? BlackboardBlockEntity
-        if (be == null) source.sendFailure(Component.literal("Blackboard: the target is not a blackboard"))
+        if (be == null) source.sendFailure(Component.translatable("command.blackboard.not_a_board"))
         return be
     }
 

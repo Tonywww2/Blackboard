@@ -63,12 +63,12 @@ object AnswerHandler {
     private fun prepare(player: ServerPlayer, level: ServerLevel, boardId: String): Prepared? {
         val be = BlackboardManager.findBoard(level, boardId)
         if (be == null) {
-            player.sendSystemMessage(Component.literal("No active blackboard '$boardId' here."))
+            player.sendSystemMessage(Component.translatable("message.blackboard.no_board", boardId))
             return null
         }
         val question = be.question
         if (question == null) {
-            player.sendSystemMessage(Component.literal("That blackboard has no question right now."))
+            player.sendSystemMessage(Component.translatable("message.blackboard.no_question"))
             return null
         }
         val generator = BlackboardRegistries.QUESTION_GENERATORS.get(question.generatorId)
@@ -105,17 +105,21 @@ object AnswerHandler {
 
             is AnswerResult.Incorrect -> {
                 val attempts = be.incrementAttempts()
-                player.sendSystemMessage(result.feedback ?: Component.literal("Incorrect."))
+                val base = result.feedback ?: Component.translatable("message.blackboard.incorrect")
                 val max = be.blackboardType?.maxAttempts ?: 0
-                if (max > 0 && attempts >= max) {
-                    // TODO(§13): out-of-attempts strategy (lock / regenerate) undecided; just notify for now.
-                    player.sendSystemMessage(Component.literal("No attempts left for this question."))
+                if (max > 0) {
+                    val left = (max - attempts).coerceAtLeast(0)
+                    val suffix = if (left > 0) Component.translatable("message.blackboard.attempts_left", left)
+                    else Component.translatable("message.blackboard.no_attempts_left")
+                    player.sendSystemMessage(Component.empty().append(base).append(suffix))
+                } else {
+                    player.sendSystemMessage(base)
                 }
             }
 
             is AnswerResult.Invalid -> {
                 // Does not consume an attempt; only echo a format/parse hint.
-                player.sendSystemMessage(result.feedback ?: Component.literal("Couldn't read that answer; check the format."))
+                player.sendSystemMessage(result.feedback ?: Component.translatable("message.blackboard.invalid"))
             }
         }
 

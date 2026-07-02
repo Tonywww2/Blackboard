@@ -7,6 +7,8 @@ import com.tonywww.blackboard.api.question.QuestionBuilder
 import com.tonywww.blackboard.api.question.Questions
 import net.minecraft.network.chat.Component
 import net.minecraft.resources.ResourceLocation
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -51,5 +53,34 @@ class ValidatorsTest {
         assertTrue(v(q, ctx("[[1,2],[3,5]]")) is AnswerResult.Incorrect)
         assertTrue(v(q, ctx("[[1,2,3],[4,5,6]]")) is AnswerResult.Incorrect) // 维度不符
         assertTrue(v(q, ctx("garbage")) is AnswerResult.Invalid)
+    }
+
+    @Test
+    fun `matrix validator accepts latex answers`() {
+        val v = Validators.matrix()
+        val q = question { store("answer", "[[1,2],[3,4]]") }
+        // pmatrix / bmatrix 等 LaTeX 写法皆可作答
+        assertTrue(v(q, ctx("\\begin{pmatrix}1 & 2 \\\\ 3 & 4\\end{pmatrix}")) is AnswerResult.Correct)
+        assertTrue(v(q, ctx("\\begin{bmatrix}1&2\\\\3&4\\end{bmatrix}")) is AnswerResult.Correct)
+        // 值错 → Incorrect
+        assertTrue(v(q, ctx("\\begin{pmatrix}1 & 2 \\\\ 3 & 5\\end{pmatrix}")) is AnswerResult.Incorrect)
+        // 维度不符 → Incorrect
+        assertTrue(v(q, ctx("\\begin{pmatrix}1 & 2 & 3\\end{pmatrix}")) is AnswerResult.Incorrect)
+    }
+
+    @Test
+    fun `parseLatexMatrix handles column vector and frac`() {
+        // 列向量 `\begin{pmatrix}5 \\ -6\end{pmatrix}`
+        assertEquals(
+            listOf(listOf(5.0), listOf(-6.0)),
+            Validators.parseLatexMatrix("\\begin{pmatrix}5\\\\-6\\end{pmatrix}"),
+        )
+        // `\frac{1}{2}` 单元
+        assertEquals(
+            listOf(listOf(0.5, 2.0)),
+            Validators.parseLatexMatrix("\\begin{bmatrix}\\frac{1}{2} & 2\\end{bmatrix}"),
+        )
+        // 非 LaTeX → null
+        assertNull(Validators.parseLatexMatrix("[[1,2]]"))
     }
 }

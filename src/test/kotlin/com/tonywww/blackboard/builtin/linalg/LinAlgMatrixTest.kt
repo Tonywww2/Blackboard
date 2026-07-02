@@ -1,6 +1,7 @@
 package com.tonywww.blackboard.builtin.linalg
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -61,5 +62,14 @@ class LinAlgMatrixTest {
     @Test
     fun `maxAbs`() {
         assertEquals(7, IntMatrix(listOf(listOf(1, -7), listOf(3, 4))).maxAbs())
+    }
+
+    @Test
+    fun `diagonalOnes and isTriangular`() {
+        assertEquals(2, IntMatrix(listOf(listOf(1, 5), listOf(0, 1))).diagonalOnes())
+        assertEquals(0, IntMatrix(listOf(listOf(2, 5), listOf(3, 2))).diagonalOnes())
+        assertTrue(IntMatrix(listOf(listOf(1, 5), listOf(0, 1))).isTriangular()) // 上三角
+        assertTrue(IntMatrix(listOf(listOf(2, 0), listOf(3, 4))).isTriangular()) // 下三角
+        assertFalse(IntMatrix(listOf(listOf(2, 3), listOf(1, 2))).isTriangular()) // 满阵
     }
 }

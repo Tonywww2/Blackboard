@@ -18,6 +18,11 @@ object ModItems {
         BlackboardBlockItem(ModBlocks.BLACKBOARD.get(), Item.Properties())
     })
 
+    /** Chalk: right-click a blackboard to open the ApricityUI answer screen (see [ChalkItem]). */
+    val CHALK: Supplier<Item> = REGISTER.register("chalk", Supplier<Item> {
+        ChalkItem(Item.Properties())
+    })
+
     fun register(bus: IEventBus) {
         REGISTER.register(bus)
     }

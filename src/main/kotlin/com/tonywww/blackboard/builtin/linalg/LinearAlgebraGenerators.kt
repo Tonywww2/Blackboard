@@ -45,10 +45,13 @@ object LinearAlgebraGenerators {
     val INVERSE: QuestionGenerator =
         matrixGen(id("la_inverse"), weight = 4) { r, d -> LinearAlgebraProblems.inverse(r, d) }
 
-    /** 所有线性代数生成器（保序）。 */
-    val ALL: List<QuestionGenerator> = listOf(DOT, EVAL, MATVEC, INVERSE)
+    val SINGULAR: QuestionGenerator =
+        matrixGen(id("la_singular"), weight = 5) { r, d -> LinearAlgebraProblems.singularValues(r, d) }
 
-    /** 内置线性代数黑板类型：`ByTag(LINEAR_ALGEBRA)` 选题、默认发奖、`!ans` 作答、不限次。 */
+    /** 所有线性代数生成器（保序）。 */
+    val ALL: List<QuestionGenerator> = listOf(DOT, EVAL, MATVEC, INVERSE, SINGULAR)
+
+    /** 内置线性代数黑板类型：`ByTag(LINEAR_ALGEBRA)` 选题、默认发奖、`!ans` 作答、最多 2 次作答。 */
     val LINEAR_ALGEBRA_TYPE: BlackboardType =
         BlackboardType.builder(id("linear_algebra"))
             .pool(GeneratorPool.ByTag(BlackboardTags.LINEAR_ALGEBRA))
@@ -56,7 +59,7 @@ object LinearAlgebraGenerators {
             .onSolved(::defaultReward)
             .rewardLootTable(id("rewards/default"))
             .answerFormat(DefaultAnswerFormat)
-            .maxAttempts(0)
+            .maxAttempts(2)
             .build()
 
     /**

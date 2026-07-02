@@ -23,6 +23,7 @@ object BlackboardClient {
     fun init() {
         if (!ModList.get().isLoaded("apricityui")) return
         BlackboardRendering.renderer = AuiBlackboardRenderer()
-        logger.info("ApricityUI detected: blackboard world renderer enabled")
+        AnswerScreenInjector.register()
+        logger.info("ApricityUI detected: blackboard world renderer + chalk answer screen enabled")
     }
 }

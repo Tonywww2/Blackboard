@@ -51,7 +51,7 @@ object CalculusGenerators {
     val ALL: List<QuestionGenerator> =
         listOf(DERIV_AT_POINT, DEF_INTEGRAL, LIMIT, DIFFERENTIATION, INDEF_INTEGRAL)
 
-    /** 内置微积分黑板类型：`ByTag(CALCULUS)` 选题、默认发奖、`!ans` 作答、不限次。 */
+    /** 内置微积分黑板类型：`ByTag(CALCULUS)` 选题、默认发奖、`!ans` 作答、最多 2 次作答。 */
     val CALCULUS_TYPE: BlackboardType =
         BlackboardType.builder(id("calculus"))
             .pool(GeneratorPool.ByTag(BlackboardTags.CALCULUS))
@@ -59,7 +59,7 @@ object CalculusGenerators {
             .onSolved(::defaultReward)
             .rewardLootTable(id("rewards/default"))
             .answerFormat(DefaultAnswerFormat)
-            .maxAttempts(0)
+            .maxAttempts(2)
             .build()
 
     /**

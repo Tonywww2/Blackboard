@@ -14,6 +14,7 @@ import net.minecraft.util.RandomSource
 /**
  * 内置题目生成器：加/减/乘/除/平方（`#blackboard:math`）与一个简单是非题（`#blackboard:text`）；
  * 均含 `#blackboard:default`，供默认黑板（`DEFAULT_TYPE` 的 `ByTag(DEFAULT)`）选题。
+ * 题面 `content` 用 LaTeX（`\times`/`\frac`/`^{}`/`\text{}`，供 JLaTeXMath 渲染），`prompt` 留纯文本兜底。
  * 判题复用 P1-D 的 [Validators]。在模组初始化阶段（注册表冻结前）调用 [register]。
  */
 object BuiltinGenerators {
@@ -22,34 +23,35 @@ object BuiltinGenerators {
         val hi = ceiling(99, 250, d)
         val a = r.nextIntBetweenInclusive(1, hi)
         val b = r.nextIntBetweenInclusive(1, hi)
-        "$a + $b = ?" to (a + b)
+        Arith("$a + $b = ?", "$a + $b = ?", a + b)
     }
 
     val SUBTRACTION: QuestionGenerator = mathGen(id("subtraction"), weight = 10) { r, d ->
         val hi = ceiling(99, 250, d)
         val a = r.nextIntBetweenInclusive(1, hi)
         val b = r.nextIntBetweenInclusive(0, a)
-        "$a - $b = ?" to (a - b)
+        Arith("$a - $b = ?", "$a - $b = ?", a - b)
     }
 
     val MULTIPLICATION: QuestionGenerator = mathGen(id("multiplication"), weight = 8) { r, d ->
         val hi = ceiling(12, 10, d)
         val a = r.nextIntBetweenInclusive(2, hi)
         val b = r.nextIntBetweenInclusive(2, hi)
-        "$a * $b = ?" to (a * b)
+        Arith("$a \\times $b = ?", "$a * $b = ?", a * b)
     }
 
     val DIVISION: QuestionGenerator = mathGen(id("division"), weight = 6) { r, d ->
         val hi = ceiling(12, 8, d)
         val b = r.nextIntBetweenInclusive(2, hi)
         val q = r.nextIntBetweenInclusive(1, hi)
-        "${b * q} / $b = ?" to q
+        val n = b * q
+        Arith("\\frac{$n}{$b} = ?", "$n / $b = ?", q)
     }
 
     val SQUARE: QuestionGenerator = mathGen(id("square"), weight = 5) { r, d ->
         val hi = ceiling(20, 30, d)
         val a = r.nextIntBetweenInclusive(2, hi)
-        "$a^2 = ?" to (a * a)
+        Arith("$a^{2} = ?", "$a^2 = ?", a * a)
     }
 
     val TRUE_FALSE_SUM: QuestionGenerator = run {
@@ -63,10 +65,11 @@ object BuiltinGenerators {
                 val b = r.nextIntBetweenInclusive(1, 50)
                 val correct = a + b
                 val shown = if (r.nextBoolean()) correct else correct + r.nextIntBetweenInclusive(1, 5)
-                val text = "Is $a + $b = $shown? (yes/no)"
+                val latex = "\\text{Is } $a + $b = $shown \\text{? (yes/no)}"
+                val plain = "Is $a + $b = $shown? (yes/no)"
                 Questions.builder(genId)
-                    .content(Component.literal(text))
-                    .prompt(Component.literal(text))
+                    .content(Component.literal(latex))
+                    .prompt(Component.literal(plain))
                     .store("answer", if (shown == correct) "yes" else "no")
                     .build()
             }
@@ -87,21 +90,24 @@ object BuiltinGenerators {
     private fun ceiling(base: Int, perLevel: Int, difficulty: Int): Int =
         base + perLevel * difficulty.coerceAtLeast(0)
 
+    /** 一道算术题的三种表示：题面 LaTeX（渲染）、纯文本兜底（聊天/日志）、标准整数答案。 */
+    private data class Arith(val latex: String, val plain: String, val answer: Int)
+
     /** 构建一个 MATH 标签、用数值校验器（[Validators.number]）判题的算术生成器（题面随 `difficulty` 放宽）。 */
     private fun mathGen(
         genId: ResourceLocation,
         weight: Int,
-        make: (RandomSource, Int) -> Pair<String, Int>,
+        make: (RandomSource, Int) -> Arith,
     ): QuestionGenerator =
         QuestionGenerator.builder(genId)
             .tag(BlackboardTags.MATH, BlackboardTags.DEFAULT)
             .weight(weight)
             .generate { ctx ->
-                val (text, answer) = make(ctx.random, ctx.difficulty.coerceAtLeast(0))
+                val p = make(ctx.random, ctx.difficulty.coerceAtLeast(0))
                 Questions.builder(genId)
-                    .content(Component.literal(text))
-                    .prompt(Component.literal(text))
-                    .store("answer", answer)
+                    .content(Component.literal(p.latex))
+                    .prompt(Component.literal(p.plain))
+                    .store("answer", p.answer)
                     .build()
             }
             .validate(Validators.number())

@@ -12,6 +12,9 @@ sealed interface BoolExpr {
     fun toLatex(): String
     fun toInfix(): String
     fun vars(): Set<Char>
+
+    /** 结点总数（复杂度度量）：叶=1、否定=1+子、二元=1+左+右。用于化简题判「够简」。 */
+    fun size(): Int
 }
 
 /** 二元逻辑算符：真值表 + LaTeX/文本符号。 */
@@ -37,6 +40,7 @@ data class Lit(val value: Boolean) : BoolExpr {
     override fun toLatex() = if (value) "\\text{T}" else "\\text{F}"
     override fun toInfix() = if (value) "T" else "F"
     override fun vars() = emptySet<Char>()
+    override fun size() = 1
 }
 
 data class Var(val name: Char) : BoolExpr {
@@ -44,6 +48,7 @@ data class Var(val name: Char) : BoolExpr {
     override fun toLatex() = name.toString()
     override fun toInfix() = name.toString()
     override fun vars() = setOf(name)
+    override fun size() = 1
 }
 
 data class Not(val e: BoolExpr) : BoolExpr {
@@ -51,6 +56,7 @@ data class Not(val e: BoolExpr) : BoolExpr {
     override fun toLatex() = "\\lnot " + parenLatex(e)
     override fun toInfix() = "NOT " + parenInfix(e)
     override fun vars() = e.vars()
+    override fun size() = 1 + e.size()
 }
 
 data class Bin(val op: BinOp, val a: BoolExpr, val b: BoolExpr) : BoolExpr {
@@ -58,9 +64,21 @@ data class Bin(val op: BinOp, val a: BoolExpr, val b: BoolExpr) : BoolExpr {
     override fun toLatex() = parenLatex(a) + " " + op.latex + " " + parenLatex(b)
     override fun toInfix() = parenInfix(a) + " " + op.infix + " " + parenInfix(b)
     override fun vars() = a.vars() + b.vars()
+    override fun size() = 1 + a.size() + b.size()
 }
 
 /** 二元子式在更外层运算下加括号（保留树结构）；否定/字面/变量无需括号（否定绑定最紧）。 */
 private fun parenLatex(e: BoolExpr): String = if (e is Bin) "\\left(" + e.toLatex() + "\\right)" else e.toLatex()
 
 private fun parenInfix(e: BoolExpr): String = if (e is Bin) "(" + e.toInfix() + ")" else e.toInfix()
+
+/** 两个表达式在其变量并集的所有赋值下真值相同 → 逻辑等价（变量数很小，≤ 约 6）。 */
+fun equivalent(a: BoolExpr, b: BoolExpr): Boolean {
+    val vars = (a.vars() + b.vars()).toList()
+    for (mask in 0 until (1 shl vars.size)) {
+        val env = HashMap<Char, Boolean>(vars.size * 2)
+        for (k in vars.indices) env[vars[k]] = (mask shr k) and 1 == 1
+        if (a.eval(env) != b.eval(env)) return false
+    }
+    return true
+}

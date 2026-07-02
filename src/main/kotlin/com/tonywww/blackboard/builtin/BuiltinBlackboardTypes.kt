@@ -25,7 +25,7 @@ import com.tonywww.blackboard.core.weightedRandomSelect
  */
 object BuiltinBlackboardTypes {
 
-    /** 默认黑板类型：按权重随机出题、答对发默认奖励、`!ans` 作答、不限次。 */
+    /** 默认黑板类型：按权重随机出题、答对发默认奖励、`!ans` 作答、最多 2 次作答。 */
     val DEFAULT_TYPE: BlackboardType =
         BlackboardType.builder(id("default"))
             .pool(GeneratorPool.ByTag(BlackboardTags.DEFAULT))
@@ -33,7 +33,7 @@ object BuiltinBlackboardTypes {
             .rewardLootTable(id("rewards/default"))
             .onSolved(::defaultReward)
             .answerFormat(DefaultAnswerFormat)
-            .maxAttempts(0)
+            .maxAttempts(2)
             .build()
 
     /** 所有内置黑板类型（保序）。 */

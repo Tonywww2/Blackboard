@@ -41,6 +41,20 @@ data class IntMatrix(val values: List<List<Int>>) {
     /** 全部元素绝对值的最大值（用于约束题目规模、避免答案过大难以输入）。 */
     fun maxAbs(): Int = values.maxOf { row -> row.maxOf { abs(it) } }
 
+    /** 对角线上等于 1 的元素个数（衡量矩阵是否“平凡近单位”）。 */
+    fun diagonalOnes(): Int = (0 until minOf(rows, cols)).count { this[it, it] == 1 }
+
+    /** 是否为上三角或下三角（三角阵可直接回代/前代求解，过于简单）。 */
+    fun isTriangular(): Boolean {
+        var upper = true
+        var lower = true
+        for (i in 0 until rows) for (j in 0 until cols) {
+            if (i > j && this[i, j] != 0) upper = false
+            if (i < j && this[i, j] != 0) lower = false
+        }
+        return upper || lower
+    }
+
     /** 显示用 LaTeX：`\begin{pmatrix} a & b \\ c & d \end{pmatrix}`（JLaTeXMath 可渲染）。 */
     fun toLatex(): String = buildString {
         append("\\begin{pmatrix}")
