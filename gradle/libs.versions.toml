@@ -1,7 +1,10 @@
 [versions]
 kotlin = "2.4.0"
 architectury-loom = "1.11-SNAPSHOT"
+# CurseForge/Modrinth/GitHub publisher. 2.x requires Gradle 9+ (wrapper is 9.6.1).
+mod-publish = "2.1.1"
 
 [plugins]
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 architectury-loom = { id = "dev.architectury.loom", version.ref = "architectury-loom" }
+publish = { id = "me.modmuss50.mod-publish-plugin", version.ref = "mod-publish" }

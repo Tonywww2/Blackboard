@@ -3,6 +3,7 @@ import net.fabricmc.loom.util.ModPlatform
 plugins {
     alias(libs.plugins.kotlin)
     alias(libs.plugins.architectury.loom)
+    alias(libs.plugins.publish)
 }
 
 val loader: ModPlatform = loom.platform.get()
@@ -175,4 +176,49 @@ tasks.processResources {
     }
     // Keep only the metadata file relevant to the current loader.
     exclude(if (loader == ModPlatform.NEOFORGE) "META-INF/mods.toml" else "META-INF/neoforge.mods.toml")
+}
+
+// ---------------------------------------------------------------------------------------------------
+// Publishing to CurseForge — me.modmuss50.mod-publish-plugin.
+//
+// Uploads THIS version node's remapped jar. The root controller (stonecutter.gradle.kts) wires a
+// `publishAllVersions` task that runs this across every loader in one go.
+//
+// Secrets/ids are read lazily (only when a publish task actually runs), so normal builds are never
+// affected by them being absent:
+//   • CURSEFORGE_TOKEN     — env var (preferred for CI), or `curseforge.token` Gradle property in your
+//                            USER-level ~/.gradle/gradle.properties (NEVER commit the token).
+//   • curseforge.projectId — numeric id from the CurseForge project page ("About Project" panel).
+//
+// Usage:
+//   ./gradlew publishAllVersions                          # both loaders
+//   ./gradlew :1.20.1-forge:publishMods                   # a single loader
+//   ./gradlew publishAllVersions -Ppublish.dryRun=true    # validate the whole pipeline, upload nothing
+// ---------------------------------------------------------------------------------------------------
+publishMods {
+    // Architectury Loom's final (remapped) artifact — NOT the raw `jar` task output.
+    file = tasks.named<net.fabricmc.loom.task.RemapJarTask>("remapJar").flatMap { it.archiveFile }
+    version = project.version.toString() // e.g. 0.1.2+1.20.1-forge — unique per loader
+    displayName = "Blackboard ${property("mod.version")} \u00b7 MC $mcVersion ($loaderName)"
+    modLoaders.add(loaderName)
+    type = STABLE
+
+    // Validate the pipeline without uploading: -Ppublish.dryRun=true
+    dryRun = providers.gradleProperty("publish.dryRun").map { it.toBoolean() }.orElse(false)
+
+    changelog = providers.environmentVariable("CHANGELOG")
+        .orElse(providers.provider { rootProject.file("CHANGELOG.md").takeIf { it.exists() }?.readText() })
+        .orElse("See https://github.com/Tonywww2/Blackboard/releases")
+
+    curseforge {
+        projectId = providers.gradleProperty("curseforge.projectId")
+        accessToken = providers.environmentVariable("CURSEFORGE_TOKEN")
+            .orElse(providers.gradleProperty("curseforge.token"))
+        minecraftVersions.add(mcVersion)
+        javaVersions.add(JavaVersion.toVersion(javaVersion))
+        // Blackboard is needed on both sides: the server owns the questions/logic, the client renders
+        // the board. CurseForge (plugin 2.x) requires at least one environment to be declared.
+        client = true
+        server = true
+    }
 }

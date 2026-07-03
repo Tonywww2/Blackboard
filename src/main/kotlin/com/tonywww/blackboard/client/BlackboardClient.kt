@@ -24,6 +24,7 @@ object BlackboardClient {
         if (!ModList.get().isLoaded("apricityui")) return
         BlackboardRendering.renderer = AuiBlackboardRenderer()
         AnswerScreenInjector.register()
+        LatexImageRenderer.pruneDiskCache() // 清理上次会话残留的旧题图
         logger.info("ApricityUI detected: blackboard world renderer + chalk answer screen enabled")
     }
 }

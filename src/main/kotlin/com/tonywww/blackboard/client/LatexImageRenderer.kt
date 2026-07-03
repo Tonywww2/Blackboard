@@ -38,11 +38,26 @@ object LatexImageRenderer {
     /** Subdirectory under `apricity/blackboard/` for generated images; also the `<img src>` prefix. */
     private const val GEN_DIR = "gen"
 
+    /** 内存缓存条数上限（LRU）。 */
+    private const val MEM_CACHE_MAX = 256
+
+    /** 磁盘 `gen/` 目录 PNG 文件数上限；超出按最后修改时间删最旧。 */
+    private const val DISK_CACHE_MAX = 512
+
+    /** 每写入这么多张新图触发一次磁盘清理（限制单次会话内的增长）。 */
+    private const val PRUNE_EVERY = 128
+
     private val worker = java.util.concurrent.Executors.newSingleThreadExecutor { r ->
         Thread(r, "blackboard-latex").apply { isDaemon = true }
     }
-    private val cache = java.util.concurrent.ConcurrentHashMap<String, Result>()
+    /** 内存缓存（hash → Result）；LRU：最多 [MEM_CACHE_MAX] 条，超出淘汰最久未用。 */
+    private val cache: MutableMap<String, Result> = java.util.Collections.synchronizedMap(
+        object : LinkedHashMap<String, Result>(64, 0.75f, true) {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Result>): Boolean = size > MEM_CACHE_MAX
+        },
+    )
     private val pending = HashMap<String, MutableList<(Result) -> Unit>>()
+    private val writeCounter = java.util.concurrent.atomic.AtomicInteger()
 
     /**
      * Ensure a PNG exists for [content] and deliver its [Result] to [onReady] on the MC client thread.
@@ -84,11 +99,35 @@ object LatexImageRenderer {
         // Cross-session disk cache: an identical PNG (content+size hash) may already be on disk from a
         // previous run. Reuse it by reading only its header dimensions, skipping the JLaTeXMath render.
         if (file.isFile) {
-            readPngSize(file)?.let { return Result("$GEN_DIR/$key.png", it.first, it.second) }
+            readPngSize(file)?.let {
+                file.setLastModified(System.currentTimeMillis()) // touch：LRU 保鲜，常看的题图不会被清理删掉
+                return Result("$GEN_DIR/$key.png", it.first, it.second)
+            }
         }
         val image = renderImage(content)
         ImageIO.write(image, "png", file)
+        if (writeCounter.incrementAndGet() % PRUNE_EVERY == 0) pruneDiskCache()
         return Result("$GEN_DIR/$key.png", image.width, image.height)
+    }
+
+    /**
+     * 清理磁盘题图缓存：`gen/` 下 PNG 超过 [maxFiles] 时，按最后修改时间删除最旧的一批（保留最近 75%）。
+     * 题图是可随时重渲染的临时产物；跨会话复用命中时会 touch 文件时间，故常看的题目不会被误删。
+     * 客户端启动时（[BlackboardClient.init]）清理上次残留，出题过程中每 [PRUNE_EVERY] 张再清一次。
+     */
+    fun pruneDiskCache(maxFiles: Int = DISK_CACHE_MAX) {
+        try {
+            val dir = Minecraft.getInstance().gameDirectory.resolve("apricity/blackboard/$GEN_DIR")
+            val files = dir.listFiles { f -> f.isFile && f.name.endsWith(".png") } ?: return
+            if (files.size <= maxFiles) return
+            files.sortBy { it.lastModified() } // 最旧在前
+            val keep = maxFiles * 3 / 4
+            var deleted = 0
+            for (i in 0 until files.size - keep) if (files[i].delete()) deleted++
+            logger.info("Pruned {} old cached LaTeX images ({} -> ~{})", deleted, files.size, keep)
+        } catch (t: Throwable) {
+            logger.warn("Failed to prune LaTeX image cache", t)
+        }
     }
 
     /** Read a PNG's pixel dimensions from its header (no full decode), or null if unreadable. */

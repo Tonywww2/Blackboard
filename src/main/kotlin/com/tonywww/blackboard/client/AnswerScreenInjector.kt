@@ -3,6 +3,7 @@ package com.tonywww.blackboard.client
 import com.sighs.apricityui.ApricityUI
 import com.sighs.apricityui.init.Element
 import com.sighs.apricityui.init.Event
+import com.sighs.apricityui.style.Box
 import com.tonywww.blackboard.answer.AnswerScreenState
 import com.tonywww.blackboard.content.BlackboardBlockEntity
 import net.minecraft.client.Minecraft
@@ -32,12 +33,29 @@ import net.neoforged.neoforge.common.NeoForge
  */
 object AnswerScreenInjector {
 
+    @Volatile
+    private var submitting = false
+
     fun register() {
         //? if forge {
         MinecraftForge.EVENT_BUS.addListener { _: ScreenEvent.Init.Post -> onScreenInit() }
+        MinecraftForge.EVENT_BUS.addListener { e: ScreenEvent.KeyPressed.Pre -> onKeyPressed(e) }
         //?} else {
         /*NeoForge.EVENT_BUS.addListener { _: ScreenEvent.Init.Post -> onScreenInit() }
+        NeoForge.EVENT_BUS.addListener { e: ScreenEvent.KeyPressed.Pre -> onKeyPressed(e) }
         *///?}
+    }
+
+    /**
+     * 答题界面打开时，拦截「物品栏键」(默认 E) 的 keyPressed，避免 AbstractContainerScreen 用它关闭界面；
+     * 字符仍经独立的 charTyped 正常输入到答题框，故在答题框里能正常打出 e。其它按键不受影响。
+     */
+    private fun onKeyPressed(event: ScreenEvent.KeyPressed.Pre) {
+        if (ApricityUI.getDocument(AnswerScreenState.TEMPLATE).firstOrNull() == null) return
+        val mc = Minecraft.getInstance()
+        if (mc.options.keyInventory.matches(event.keyCode, event.scanCode)) {
+            event.isCanceled = true
+        }
     }
 
     /** Client entry: ask AUI to open the (server-authoritative) answer screen. */
@@ -50,9 +68,15 @@ object AnswerScreenInjector {
         val pos = AnswerScreenState.pendingPos ?: return
         val be = Minecraft.getInstance().level?.getBlockEntity(pos) as? BlackboardBlockEntity ?: return
         val boardId = be.boardId
+        submitting = false // 新开屏（或 resize 重建）：重置提交去重标记
 
         doc.getElementById(ID_BOARD)?.let { setText(it, "#$boardId") }
-        doc.getElementById(ID_ANSWER)?.setAttribute("placeholder", I18n.get("gui.blackboard.answer_placeholder"))
+        doc.getElementById(ID_ANSWER)?.let { answer ->
+            answer.setAttribute("placeholder", I18n.get("gui.blackboard.answer_placeholder"))
+            // 输入后 AUI 会把含文本的 textarea 改用内容宽度（Size.isText），故每次输入都重新对齐题面框宽度
+            answer.addEventListener("input") { _: Event -> syncAnswerWidth() }
+            answer.addEventListener("keyup") { _: Event -> syncAnswerWidth() }
+        }
 
         val content = be.question?.content?.string
         val img = doc.getElementById(ID_CONTENT)
@@ -68,12 +92,27 @@ object AnswerScreenInjector {
 
     /** Read the input box and send the answer through chat, then close the screen. */
     private fun submit(boardId: String) {
+        if (submitting) return // 去重：一次开屏只提交一次（防 click 事件重复触发导致答两次）
         val doc = ApricityUI.getDocument(AnswerScreenState.TEMPLATE).firstOrNull() ?: return
         val field = doc.getElementById(ID_ANSWER)
         val answer = (field?.value ?: field?.innerText ?: "").trim()
         if (answer.isEmpty()) return
+        submitting = true
         Minecraft.getInstance().player?.connection?.sendChat("!ans $boardId $answer")
         ApricityUI.closeScreen()
+    }
+
+    /**
+     * 把答题框宽度对齐题面框：AUI 对含文本的 <textarea> 会改用「内容宽度」测量（Size.isText），
+     * 覆盖 flex 拉伸而导致输入后变窄。这里读题面框的实际渲染宽度，给答题框设显式 px 宽（显式宽
+     * 度走 resolveLength 分支、不受内容测量影响），使输入后仍与题面框同宽。
+     */
+    private fun syncAnswerWidth() {
+        val doc = ApricityUI.getDocument(AnswerScreenState.TEMPLATE).firstOrNull() ?: return
+        val wrap = doc.getElementById(ID_CONTENT_WRAP) ?: return
+        val answer = doc.getElementById(ID_ANSWER) ?: return
+        val w = Box.of(wrap).elementSize().width()
+        if (w > 1.0) answer.setAttribute("style", "width:${w.toInt()}px")
     }
 
     /** Point [img] at the rendered PNG and size it (preserving aspect) to fit the content area. */
@@ -100,6 +139,7 @@ object AnswerScreenInjector {
 
     private const val ID_BOARD = "board-id"
     private const val ID_CONTENT = "content"
+    private const val ID_CONTENT_WRAP = "content-wrap"
     private const val ID_ANSWER = "answer"
     private const val ID_SUBMIT = "submit"
     private const val CONTENT_W = 300.0 // usable content width in AUI px (panel minus padding)
